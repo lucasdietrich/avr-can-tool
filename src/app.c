@@ -6,6 +6,8 @@
 #include "shell.h"
 #include "can.h"
 
+#include <Arduino.h>
+
 /*___________________________________________________________________________*/
 
 // Application (Module)

@@ -41,6 +41,8 @@ uint8_t can_send(can_message *msg, k_timeout_t timeout);
 #define CAN_DIR_TX      0
 void can_show_message(can_message *msg, uint8_t dir);
 
+int8_t can_shell_handler(char *cmd, uint8_t len);
+
 #ifdef __cplusplus
 }
 #endif

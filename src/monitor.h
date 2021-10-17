@@ -1,24 +1,21 @@
-#ifndef _APP_H
-#define _APP_H
-
-/*___________________________________________________________________________*/
+#ifndef _MONITOR_H
+#define _MONITOR_H
 
 #include <avrtos/kernel.h>
 
-#include "defines.h"
+#include "app.h"
 
 /*___________________________________________________________________________*/
 
-#include "init.h"
-#include "shell.h"
-#include "can.h"
-#include "monitor.h"
-#include "kernel_module.h"
+#define MONITOR_DUMP_CANARIES   (1 << 0)
+#define MONITOR_DUMP_THREADS    (1 << 1)
 
 /*___________________________________________________________________________*/
 
-void app_init(void);
+void monitor_thread_entry(void *context);
+
+int8_t monitor_shell_handler(char *cmd, uint8_t len);
 
 /*___________________________________________________________________________*/
 
-#endif /* _APP_H */
+#endif

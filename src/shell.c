@@ -4,9 +4,8 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 
-#include "can.h"
-
 #include "app.h"
+#include "parser.h"
 
 /*___________________________________________________________________________*/
 
@@ -25,7 +24,7 @@ void shell_thread(void *context)
         for (;;) {
                 usart_print("\n> ");
                 command *cmd = (command *)k_fifo_get(&cmd_fifo, K_FOREVER);
-                switch (cmd->cursor) {
+                switch (cmd->len) {
                 case 0: /* LR only, do nothing */
                         break;
                 case CMD_CANCELLED:
@@ -42,8 +41,8 @@ void shell_thread(void *context)
                 }
                 break;
                 default:
-                        if (cmd->cursor >= 0)
-                                shell_process_command(cmd);
+                        if (cmd->len >= 0)
+                                shell_dispatch_command(cmd);
                         break;
                 }
                 k_mem_slab_free(&cmd_slab, cmd);
@@ -74,35 +73,35 @@ inline void shell_handle_rx(const char rx)
                         return;
                 }
 
-                /* reset cursor as the buffer is not cleared when freed */
-                cmd->cursor = 0;
+                /* reset len as the buffer is not cleared when freed */
+                cmd->len = 0;
         }
 
         switch (rx) {
         case 0x1A: /* Ctrl + Z -> drop */
-                cmd->cursor = CMD_CANCELLED;
+                cmd->len = CMD_CANCELLED;
                 send_command(&cmd);
                 break;
 
         case '\n': /* process the packet */
-                cmd->buffer[cmd->cursor] = '\0';
+                cmd->buffer[cmd->len] = '\0';
                 send_command(&cmd);
                 break;
 
         case 0x08: /* delete last char */
-                if (cmd->cursor != 0) {
-                        cmd->cursor--;
+                if (cmd->len != 0) {
+                        cmd->len--;
                         usart_transmit(rx);
                 }
                 break;
 
         default:
-                if (cmd->cursor == sizeof(cmd->buffer) - 1u) {
-                        cmd->cursor = CMD_TOOLONG;
+                if (cmd->len == sizeof(cmd->buffer) - 1u) {
+                        cmd->len = CMD_TOOLONG;
                         send_command(&cmd);
                 }
 
-                cmd->buffer[cmd->cursor++] = rx;
+                cmd->buffer[cmd->len++] = rx;
 
                 /* notify io stream
                  * unoptimal, move console stream in another thread
@@ -120,42 +119,48 @@ ISR(USART_RX_vect)
 
 /*___________________________________________________________________________*/
 
-void shell_process_command(command *cmd)
-{
+static const struct shell_module modules[] PROGMEM = {
+        SHELL_MODULE("can", can_shell_handler),
+        SHELL_MODULE("caniot", NULL),
+        SHELL_MODULE("kernel", kernel_shell_handler),
+        SHELL_MODULE("monitor", monitor_shell_handler),
+};
+
+static shell_module_handler_t find_module_handler(command *cmd, uint8_t *skip) {
         __ASSERT_NOTNULL(cmd);
 
-        shell_parse_command(cmd);
+        shell_module_handler_t handler = NULL;
+
+        for(uint8_t i = 0; i < ARRAY_SIZE(modules); i++) {
+                const char name_len = pgm_read_byte(&modules[i].name_len);
+                if (strncmp_P(cmd->buffer, modules[i].name, name_len) == 0) {
+                        handler = pgm_read_ptr(&modules[i].handler);
+                        *skip = name_len + 1u;
+                        break;
+                }
+        }
+        return handler;
 }
 
-extern struct k_signal sig_monitor;
 
-int8_t shell_parse_command(command *cmd)
+PROGMEM_STRING(dispatch_notfound, "\nModule not found !\n");
+PROGMEM_STRING(dispatch_failed, "\nFailed to execute module handler err = ");
+
+void shell_dispatch_command(command *cmd)
 {
-        char buffer[128];
+        int8_t ret = -1;
+        uint8_t skip = 0;
 
-        sprintf(buffer, "\nReceived command [%d] : %s",
-                cmd->cursor, cmd->buffer);
-        usart_print(buffer);
-
-        /* demo signal */
-        if (strncmp(cmd->buffer, "monitor canaries", sizeof("monitor canaries")) == 0) {
-                k_signal_raise(&sig_monitor, MONITOR_DUMP_CANARIES);
-        } else if (strncmp(cmd->buffer, "monitor threads", sizeof("monitor threads")) == 0) {
-                k_signal_raise(&sig_monitor, MONITOR_DUMP_THREADS);
-        } else if (strncmp(cmd->buffer, "can send", sizeof("can send")) == 0) {
-                can_message_qi *p_msg = NULL;
-                int8_t err = can_msg_alloc(&p_msg, K_SECONDS(1));
-                if (err == 0) {
-                        p_msg->msg.id = 0xADECu;
-                        p_msg->msg.len = 2u;
-                        p_msg->msg.type = 1u; /* STD = 0, EXT = 1 */
-                        p_msg->msg.buffer[0] = 0x12u;
-                        p_msg->msg.buffer[0] = 0x34u;
-                        can_tx_msg_queue(p_msg);
+        shell_module_handler_t handler = find_module_handler(cmd, &skip);
+        if (handler != NULL) {
+                const uint8_t len = skip >= cmd->len ? 0u : cmd->len - skip;
+                ret = handler(cmd->buffer + skip, len);
+                if (ret) {
+                        usart_print_p(dispatch_failed);
+                        usart_hex(ret);
+                        usart_transmit('\n');
                 }
-        } else if (strncmp(cmd->buffer, "wait", sizeof("wait")) == 0) {
-                k_sleep(K_SECONDS(1));
+        } else {
+                usart_print_p(dispatch_notfound);
         }
-
-        return 0;
 }

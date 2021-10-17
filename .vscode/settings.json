@@ -5,6 +5,10 @@
         "app.h": "c",
         "led.h": "c",
         "shell.h": "c",
-        "interrupt.h": "c"
+        "interrupt.h": "c",
+        "unistd.h": "c",
+        "arduino.h": "c",
+        "parser.h": "c",
+        "can.h": "c"
     }
 }
