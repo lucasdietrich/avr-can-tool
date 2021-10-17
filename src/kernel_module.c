@@ -14,6 +14,9 @@ static const struct cmd_descr kernel_command_descr[] PROGMEM = {
 };
 
 PROGMEM_STRING(wait_s, "wait");
+PROGMEM_STRING(random_s, "random");
+
+K_PRNG_DEFINE_DEFAULT(prng);
 
 int8_t kernel_shell_handler(char *cmd, uint8_t len)
 {
@@ -35,6 +38,16 @@ int8_t kernel_shell_handler(char *cmd, uint8_t len)
                         }
 
                         k_sleep(K_MSEC(delay_ms));
+                        ret = 0;
+                } else if (strcmp_P(data.what, random_s) == 0) {
+                        uint8_t buffer[10];
+                        k_prng_get_buffer(&prng, buffer, sizeof(buffer));
+
+                        usart_transmit('\n');
+                        for (uint8_t i = 0; i < sizeof(buffer); i++) {
+                                usart_hex(buffer[i]);
+                                usart_transmit(' ');
+                        }
                         ret = 0;
                 }
         }
