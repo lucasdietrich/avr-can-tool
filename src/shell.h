@@ -16,13 +16,17 @@ typedef struct
         int8_t cursor;
 } command;
 
+/*___________________________________________________________________________*/
+
 void shell_init(void);
 
-inline void shell_handle_rx(const char rx);
+void shell_thread(void *context);
+
+void shell_handle_rx(const char rx);
+
+void shell_process_command(command *cmd);
 
 int8_t shell_parse_command(command *cmd);
-
-void shell_thread(void *context);
 
 /*___________________________________________________________________________*/
 

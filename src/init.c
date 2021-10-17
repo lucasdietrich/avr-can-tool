@@ -27,7 +27,7 @@ void _k_avrtos_init(void)
 }
 
 // @see "init" function from arduino in "wiring.c"
-void hw_init(void)
+void hw_ll_init(void)
 {
     // on the ATmega168, timer 0 is also used for fast hardware pwm
     // (using phase-correct PWM would mean that timer 0 overflowed half as often

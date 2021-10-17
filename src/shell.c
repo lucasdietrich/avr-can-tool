@@ -4,12 +4,51 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 
-// Shell (Module)
-#define K_MODULE 0x20
+#include "can.h"
 
+#include "app.h"
+
+/*___________________________________________________________________________*/
+
+#define K_MODULE K_MODULE_SHELL
+
+/*___________________________________________________________________________*/
+
+/* define count > 1 if some commands need time to be parse/processed */
 K_MEM_SLAB_DEFINE(cmd_slab, sizeof(command), 2u);
-
 K_FIFO_DEFINE(cmd_fifo);
+K_THREAD_DEFINE(shell, shell_thread, 0x100,
+        K_PRIO_PREEMPT(K_PRIO_LOW), NULL, '>');
+
+void shell_thread(void *context)
+{
+        for (;;) {
+                usart_print("\n> ");
+                command *cmd = (command *)k_fifo_get(&cmd_fifo, K_FOREVER);
+                switch (cmd->cursor) {
+                case 0: /* LR only, do nothing */
+                        break;
+                case CMD_CANCELLED:
+                {
+                        static const char cancelled[] PROGMEM = "\nCancelled";
+                        usart_print_p(cancelled);
+                }
+                break;
+                case CMD_TOOLONG:
+                {
+                        static const char toolong[] PROGMEM =
+                                "\nToo long, max = 64";
+                        usart_print_p(toolong);
+                }
+                break;
+                default:
+                        if (cmd->cursor >= 0)
+                                shell_process_command(cmd);
+                        break;
+                }
+                k_mem_slab_free(&cmd_slab, cmd);
+        }
+}
 
 void shell_init(void)
 {
@@ -20,11 +59,11 @@ void shell_init(void)
 static void send_command(command **command)
 {
         __ASSERT_NOTNULL(*command);
-        k_fifo_put(&cmd_fifo, *(void**)command);
+        k_fifo_put(&cmd_fifo, *(void **)command);
         *command = NULL;
 }
 
-void shell_handle_rx(const char rx)
+inline void shell_handle_rx(const char rx)
 {
         static command *cmd = NULL;
 
@@ -79,6 +118,17 @@ ISR(USART_RX_vect)
         shell_handle_rx(rx);
 }
 
+/*___________________________________________________________________________*/
+
+void shell_process_command(command *cmd)
+{
+        __ASSERT_NOTNULL(cmd);
+
+        shell_parse_command(cmd);
+}
+
+extern struct k_signal sig_monitor;
+
 int8_t shell_parse_command(command *cmd)
 {
         char buffer[128];
@@ -87,45 +137,25 @@ int8_t shell_parse_command(command *cmd)
                 cmd->cursor, cmd->buffer);
         usart_print(buffer);
 
-        return 0;
-}
-
-/*___________________________________________________________________________*/
-
-K_THREAD_DEFINE(shell, shell_thread, 0x100,
-        K_PRIO_PREEMPT(K_PRIO_LOW), NULL, '#');
-
-void shell_thread(void *context)
-{
-        int8_t err;
-
-        for (;;) {
-                usart_print("\n> ");
-                command *cmd = (command *)k_fifo_get(&cmd_fifo, K_FOREVER);
-                switch (cmd->cursor) {
-                case 0: /* LR only, do nothing */
-                        break;
-                case CMD_CANCELLED:
-                {
-                        static const char cancelled[] PROGMEM = "\nCancelled";
-                        usart_print_p(cancelled);
+        /* demo signal */
+        if (strncmp(cmd->buffer, "monitor canaries", sizeof("monitor canaries")) == 0) {
+                k_signal_raise(&sig_monitor, MONITOR_DUMP_CANARIES);
+        } else if (strncmp(cmd->buffer, "monitor threads", sizeof("monitor threads")) == 0) {
+                k_signal_raise(&sig_monitor, MONITOR_DUMP_THREADS);
+        } else if (strncmp(cmd->buffer, "can send", sizeof("can send")) == 0) {
+                can_message_qi *p_msg = NULL;
+                int8_t err = can_msg_alloc(&p_msg, K_SECONDS(1));
+                if (err == 0) {
+                        p_msg->msg.id = 0xADECu;
+                        p_msg->msg.len = 2u;
+                        p_msg->msg.type = 1u; /* STD = 0, EXT = 1 */
+                        p_msg->msg.buffer[0] = 0x12u;
+                        p_msg->msg.buffer[0] = 0x34u;
+                        can_tx_msg_queue(p_msg);
                 }
-                break;
-                case CMD_TOOLONG:
-                {
-                        static const char toolong[] PROGMEM =
-                                "\nToo long, max = 64";
-                        usart_print_p(toolong);
-                }
-                break;
-                default:
-                        if (cmd->cursor >= 0) {
-                                err = shell_parse_command(cmd);
-
-                                ARG_UNUSED(err);
-                        }
-                        break;
-                }
-                _k_mem_slab_free(&cmd_slab, cmd);
+        } else if (strncmp(cmd->buffer, "wait", sizeof("wait")) == 0) {
+                k_sleep(K_SECONDS(1));
         }
+
+        return 0;
 }
