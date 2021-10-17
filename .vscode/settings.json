@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "*.asm": "avr",
+        "kernel.h": "c",
+        "app.h": "c",
+        "led.h": "c",
+        "shell.h": "c",
+        "interrupt.h": "c"
+    }
+}

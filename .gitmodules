@@ -1,0 +1,4 @@
+[submodule "lib/AVRTOS"]
+	path = lib/AVRTOS
+	url = git@github.com:Adecy/AVRTOS.git
+	branch = kernel_init_c
