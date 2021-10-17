@@ -17,12 +17,12 @@ mcp2515_can can(SPI_CS_PIN);
 
 K_MUTEX_DEFINE(can_mutex_if);
 
-K_THREAD_DEFINE(can_rx, can_rx_thread, 0x64, K_PRIO_COOP(K_PRIO_MAX), NULL, 'R');
+K_THREAD_DEFINE(can_rx, can_rx_thread, 0x64, K_COOPERATIVE, NULL, 'R');
 K_SIGNAL_DEFINE(can_sig_rx);
 
 K_MEM_SLAB_DEFINE(can_msg_pool, sizeof(can_message_qi), 2u);
 K_FIFO_DEFINE(can_tx_q);
-K_THREAD_DEFINE(can_tx, can_tx_thread, 0x64, K_PRIO_COOP(K_PRIO_MAX), NULL, 'T');
+K_THREAD_DEFINE(can_tx, can_tx_thread, 0x64, K_COOPERATIVE, NULL, 'T');
 
 void can_init(void)
 {
