@@ -21,7 +21,7 @@ K_THREAD_DEFINE(shell, shell_thread, 0x100, K_PREEMPTIVE, NULL, '>');
 void shell_thread(void *context)
 {
         for (;;) {
-                usart_print("\n> ");
+                usart_print("\n# ");
                 command *cmd = (command *)k_fifo_get(&cmd_fifo, K_FOREVER);
                 switch (cmd->len) {
                 case 0: /* LR only, do nothing */
@@ -126,7 +126,8 @@ void shell_dispatch_command(command *cmd)
         int8_t ret = -1;
         uint8_t skip = 0;
 
-        shell_module_handler_t handler = find_module_handler(cmd, &skip);
+        /* execute module hanlder */
+        shell_module_handler_t handler = shell_get_module_handler(cmd, &skip);
         if (handler != NULL) {
                 const uint8_t len = skip >= cmd->len ? 0u : cmd->len - skip;
                 ret = handler(cmd->buffer + skip, len);

@@ -47,27 +47,23 @@ int16_t cmd_parse_arg(char *buffer, uint16_t len,
         const uint8_t type, void *const data_addr)
 {
         int16_t ret;
+
         switch (type) {
         case CMD_TYPE_STRING:
                 ret = cmd_parse_string(buffer, len);
                 if (ret > 0) {
-                        *(char**)data_addr = buffer;
+                        *(char **)data_addr = buffer;
                         buffer[ret] = '\0';
                         return ret + 1;
                 }
                 break;
+
         case CMD_TYPE_NUMBER:
-                ret = cmd_parse_number(buffer, len, (uint32_t*)data_addr);
-                if(ret == 1u) {
-                        ret = find(buffer, len, ' ');
-                        if (ret >= 0)
-                                return ret + 1;
-                        else
-                                return len;
-                }
         case CMD_TYPE_HEX:
-                ret = cmd_parse_hex(buffer, len, (uint32_t*)data_addr);
-                if(ret == 1u) {
+                ret = (type == CMD_TYPE_NUMBER)
+                        ? cmd_parse_number(buffer, len, (uint32_t *)data_addr)
+                        : cmd_parse_hex(buffer, len, (uint32_t *)data_addr);
+                if (ret == 1u) {
                         ret = find(buffer, len, ' ');
                         if (ret >= 0)
                                 return ret + 1;

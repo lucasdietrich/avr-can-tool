@@ -24,7 +24,7 @@ struct shell_module {
                 .help = help_p                                 \
         }
 
-shell_module_handler_t find_module_handler(command *cmd, uint8_t *skip);
+shell_module_handler_t shell_get_module_handler(command *cmd, uint8_t *skip);
 
 /*___________________________________________________________________________*/
 

@@ -35,7 +35,7 @@ static const struct shell_module modules[] PROGMEM = {
         SHELL_MODULE("help", shell_help_handler, NULL),
 };
 
-shell_module_handler_t find_module_handler(command *cmd, uint8_t *skip) {
+shell_module_handler_t shell_get_module_handler(command *cmd, uint8_t *skip) {
         __ASSERT_NOTNULL(cmd);
 
         shell_module_handler_t handler = NULL;
@@ -69,6 +69,7 @@ int8_t shell_help_handler(char *cmd, uint8_t len)
 {
         const struct shell_module *module = NULL;
 
+        /* get the module for which to display help */
         struct shell_help_module data;
         if (cmd_parse(cmd, len, shell_help_module,
                 ARRAY_SIZE(shell_help_module), &data) > 0) {
@@ -80,12 +81,15 @@ int8_t shell_help_handler(char *cmd, uint8_t len)
                 }
         }
 
+        
         if (module == NULL) {
+                /* get modules list */
                 for (uint8_t i = 0; i < ARRAY_SIZE(modules); i++) {
                         usart_print_p(s1);
                         usart_print_p(modules[i].name);
                 }
         } else {
+                /* get help for a specific module */
                 const char *descr_p = pgm_read_ptr(&module->help);
                 usart_transmit('\n');
                 usart_print_p(descr_p == NULL

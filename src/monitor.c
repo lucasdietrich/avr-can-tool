@@ -44,7 +44,6 @@ int8_t monitor_shell_handler(char *cmd, uint8_t len)
         ret = cmd_parse(cmd, len, monitor_command_descr,
                 ARRAY_SIZE(monitor_command_descr), &data);
         if (ret > 0 && CMD_ARG_DEFINED(ret, 0)) {
-
                 ret = 0;
                 if (strcmp_P(data.what, threads_s) == 0) {
                         k_signal_raise(&sig_monitor, MONITOR_DUMP_THREADS);

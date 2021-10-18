@@ -67,7 +67,7 @@ void can_tx_thread(void *context)
 
                 if (can_send(p_msg, K_FOREVER) == 0)
                         can_show_message(p_msg, CAN_DIR_TX);
-                
+
                 can_msg_free(mem);
         }
 }
@@ -88,11 +88,11 @@ void can_tx_msg_queue(can_message_qi *msg)
 
 void can_msg_free(can_message_qi *msg)
 {
-        k_mem_slab_free(&can_msg_pool, (void*) msg);
+        k_mem_slab_free(&can_msg_pool, (void *)msg);
 }
 
 void can_show_message(can_message *msg, uint8_t dir)
-{       
+{
         PROGMEM_STRING(s_rx, "RX ");
         PROGMEM_STRING(s_tx, "TX ");
         usart_print_p((dir == CAN_DIR_RX) ? s_rx : s_tx);
@@ -116,7 +116,7 @@ uint8_t can_recv(can_message *msg, k_timeout_t timeout)
                 rc = -1;
                 if (can.checkReceive() == CAN_MSGAVAIL)
                         rc = can.readMsgBufID(&msg->id, &msg->len, msg->buffer);
-                
+
                 k_mutex_unlock(&can_mutex_if);
         }
         return rc;
@@ -128,7 +128,7 @@ uint8_t can_send(can_message *msg, k_timeout_t timeout)
         uint8_t rc = k_mutex_lock(&can_mutex_if, timeout);
         if (rc == 0) {
                 rc = can.sendMsgBuf(msg->id, msg->type, msg->len, msg->buffer);
-                
+
                 k_mutex_unlock(&can_mutex_if);
         }
         return rc;
@@ -140,7 +140,7 @@ struct can_command
 {
         char *rxtx;
         unsigned int id;
-        union 
+        union
         {
                 struct {
                         unsigned int b0;
@@ -154,8 +154,8 @@ struct can_command
                 };
                 unsigned int buffer[8];
         };
-        
-        
+
+
 };
 
 const struct cmd_descr can_command_descr[] PROGMEM = {
@@ -185,7 +185,7 @@ int8_t can_shell_handler(char *cmd, uint8_t len)
         args = cmd_parse(cmd, len, can_command_descr,
                 ARRAY_SIZE(can_command_descr), &data);
         if (args <= 0 || !CMD_ARG_DEFINED(args, 0) || !CMD_ARG_DEFINED(args, 1)) {
-                ret = (int8_t) args;
+                ret = (int8_t)args;
                 goto exit;
         }
 
@@ -210,7 +210,7 @@ int8_t can_shell_handler(char *cmd, uint8_t len)
         for (uint_fast8_t i = 0; i < 8; i++) {
                 if (CMD_ARG_DEFINED(args, 2 + i)) {
                         p_msg->msg.len++;
-                        p_msg->msg.buffer[i] = (uint8_t) data.buffer[i];
+                        p_msg->msg.buffer[i] = (uint8_t)data.buffer[i];
                 } else {
                         break;
                 }
@@ -223,5 +223,5 @@ int8_t can_shell_handler(char *cmd, uint8_t len)
 
 exit:
         can_msg_free(p_msg);
-        return ret;        
+        return ret;
 }
