@@ -5,7 +5,7 @@
 #include <avr/pgmspace.h>
 
 #include "app.h"
-#include "parser.h"
+#include "shell_modules.h"
 
 /*___________________________________________________________________________*/
 
@@ -118,30 +118,6 @@ ISR(USART_RX_vect)
 
 /*___________________________________________________________________________*/
 
-static const struct shell_module modules[] PROGMEM = {
-        SHELL_MODULE("can", can_shell_handler),
-        SHELL_MODULE("caniot", NULL),
-        SHELL_MODULE("kernel", kernel_shell_handler),
-        SHELL_MODULE("monitor", monitor_shell_handler),
-};
-
-static shell_module_handler_t find_module_handler(command *cmd, uint8_t *skip) {
-        __ASSERT_NOTNULL(cmd);
-
-        shell_module_handler_t handler = NULL;
-
-        for(uint8_t i = 0; i < ARRAY_SIZE(modules); i++) {
-                const char name_len = pgm_read_byte(&modules[i].name_len);
-                if (strncmp_P(cmd->buffer, modules[i].name, name_len) == 0) {
-                        handler = pgm_read_ptr(&modules[i].handler);
-                        *skip = name_len + 1u;
-                        break;
-                }
-        }
-        return handler;
-}
-
-
 PROGMEM_STRING(dispatch_notfound, "\nModule not found !\n");
 PROGMEM_STRING(dispatch_failed, "\nFailed to execute module handler err = ");
 
@@ -163,3 +139,5 @@ void shell_dispatch_command(command *cmd)
                 usart_print_p(dispatch_notfound);
         }
 }
+
+/*___________________________________________________________________________*/

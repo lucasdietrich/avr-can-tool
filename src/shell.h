@@ -29,21 +29,6 @@ void shell_handle_rx(const char rx);
 /* dispatcher */
 void shell_dispatch_command(command *cmd);
 
-typedef int8_t (*shell_module_handler_t) (char *cmd, uint8_t len);
-
-struct shell_module {
-        char name[8];
-        uint8_t name_len;
-        shell_module_handler_t handler;
-};
-
-#define SHELL_MODULE(module_name, module_handler)       \
-        {                                               \
-                .name = module_name,                    \
-                .name_len = sizeof(module_name) - 1,    \
-                .handler = module_handler               \
-        }
-
 /*___________________________________________________________________________*/
 
 #endif

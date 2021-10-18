@@ -8,10 +8,10 @@
 
 
 #define PROGMEM_STRING(name, string)            \
-    static const char name[] PROGMEM = string;
+    static const char name[] PROGMEM = string
 
 #define PRINT_PROGMEM_STRING(name, string)      \
     static const char name[] PROGMEM = string;  \
-    usart_print_p(name);
+    usart_print_p(name)
     
 #endif /* _DEFINES_H */
