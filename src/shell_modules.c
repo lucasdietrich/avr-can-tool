@@ -1,6 +1,8 @@
 #include "shell_modules.h"
 
 #include "parser.h"
+#include "shell_can.h"
+#include "kernel_module.h"
 
 /*___________________________________________________________________________*/
 

@@ -1,6 +1,10 @@
 #ifndef _MONITOR_H
 #define _MONITOR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <avrtos/kernel.h>
 
 #include "app.h"
@@ -17,5 +21,9 @@ void monitor_thread_entry(void *context);
 int8_t monitor_shell_handler(char *cmd, uint8_t len);
 
 /*___________________________________________________________________________*/
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

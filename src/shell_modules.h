@@ -1,6 +1,11 @@
 #ifndef _SHELL_MODULES_H
 #define _SHELL_MODULES_H
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <avrtos/kernel.h>
 
 #include "app.h"
@@ -31,5 +36,10 @@ shell_module_handler_t shell_get_module_handler(command *cmd, uint8_t *skip);
 int8_t shell_help_handler(char *cmd, uint8_t len);
 
 /*___________________________________________________________________________*/
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

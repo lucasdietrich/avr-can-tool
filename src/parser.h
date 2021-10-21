@@ -1,13 +1,13 @@
 #ifndef _PARSER_H
 #define _PARSER_H
 
-#include <avrtos/kernel.h>
-
-#include "app.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <avrtos/kernel.h>
+
+#include "app.h"
 
 /*___________________________________________________________________________*/
 

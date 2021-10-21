@@ -1,11 +1,11 @@
 #ifndef _CAN_H
 #define _CAN_H
 
-#include "app.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include "app.h"
 
 typedef struct 
 {
@@ -21,7 +21,7 @@ typedef struct
         can_message msg;
 } can_message_qi; /* qi = Queue Item */
 
-inline void can_clear_message(can_message *msg)
+static inline void can_clear_message(can_message *msg)
 {
         memset(msg, 0x00, sizeof(can_message));
 }
@@ -40,8 +40,6 @@ uint8_t can_send(can_message *msg, k_timeout_t timeout);
 #define CAN_DIR_RX      1
 #define CAN_DIR_TX      0
 void can_show_message(can_message *msg, uint8_t dir);
-
-int8_t can_shell_handler(char *cmd, uint8_t len);
 
 #ifdef __cplusplus
 }

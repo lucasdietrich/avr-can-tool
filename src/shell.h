@@ -1,6 +1,11 @@
 #ifndef _SHELL_H
 #define _SHELL_H
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <avrtos/kernel.h>
 
 /*___________________________________________________________________________*/
@@ -30,5 +35,9 @@ void shell_handle_rx(const char rx);
 void shell_dispatch_command(command *cmd);
 
 /*___________________________________________________________________________*/
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
