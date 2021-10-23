@@ -24,18 +24,50 @@ K_MEM_SLAB_DEFINE(can_msg_pool, sizeof(can_message_qi), 2u);
 K_FIFO_DEFINE(can_tx_q);
 K_THREAD_DEFINE(can_tx, can_tx_thread, 0x64, K_COOPERATIVE, NULL, 'T');
 
+static struct can_config config = {
+        {
+                .flags = 0 & CAN_LOOPBACK_FLAG
+        },
+        .loopback_rule = can_loopback_rule,
+        .masks = {0, 0},
+        .filters = {0, 0, 0, 0, 0, 0},
+        .speedset = CAN_500KBPS,
+};
 
 void can_init(void)
 {
-        while (CAN_OK != can.begin(CAN_500KBPS, MCP_8MHz)) {
-                PRINT_PROGMEM_STRING(can_fail_msg, "can begin failed retry\n");
-                k_sleep(K_MSEC(500));
-        }
+        can_configure(&config);
 
         /* interrupt when receiving a can message (falling on INT0) */
         EICRA |= 1 << ISC01;
         EICRA &= ~(1 << ISC00);
         EIMSK |= 1 << INT0;
+}
+
+void can_configure(struct can_config *cfg)
+{
+        k_mutex_lock(&can_mutex_if, K_FOREVER);
+
+        while (CAN_OK != can.begin(cfg->speedset, MCP_8MHz)) {
+                PRINT_PROGMEM_STRING(can_fail_msg, "can begin failed retry\n");
+                k_sleep(K_MSEC(500));
+        }
+        
+        can.init_Mask(0, CAN_EXTID, cfg->masks[0]);
+        if (cfg->masks[0]) {
+                can.init_Filt(0, CAN_EXTID, cfg->filters[0]);
+                can.init_Filt(1, CAN_EXTID, cfg->filters[1]);
+        }
+        
+        can.init_Mask(1, CAN_EXTID, cfg->masks[1]);
+        if (cfg->masks[0]) {
+                can.init_Filt(2, CAN_EXTID, cfg->filters[2]);
+                can.init_Filt(3, CAN_EXTID, cfg->filters[3]);
+                can.init_Filt(4, CAN_EXTID, cfg->filters[4]);
+                can.init_Filt(5, CAN_EXTID, cfg->filters[5]);
+        }
+
+        k_mutex_unlock(&can_mutex_if);
 }
 
 ISR(INT0_vect)
@@ -49,13 +81,49 @@ void can_rx_thread(void *context)
 
         for (;;) {
                 k_poll_signal(&can_sig_rx, K_FOREVER);
-                /* K_SIGNAL_SET_UNREADY(&can_sig_rx); */
                 can_sig_rx.flags = K_POLL_STATE_NOT_READY;
 
-                while (can_recv(&msg, K_FOREVER) == 0) {
-                        can_show_message(&msg, CAN_DIR_RX);
+                while (can_process_rx_message(&msg)) {
+                        /* yield to allow tx thread to process 
+                         * loopback packet if any */
+                        k_yield();
                 }
         }
+}
+
+bool can_process_rx_message(can_message *buffer)
+{
+        can_message *p_msg = buffer;
+        can_message_qi *p_msg_qi = NULL;
+
+        if (config.loopback && (config.loopback_rule != NULL)) {
+                if (can_msg_alloc(&p_msg_qi, K_MSEC(100u)) == 0) {
+                        p_msg = &p_msg_qi->msg;
+                }
+        }
+
+        if (can_recv(p_msg) == 0) {
+                /* TX threads is cooperative, p_msg_qi will be deallocated 
+                 * only after this function returned */
+                can_show_message(p_msg, CAN_DIR_RX);
+
+                /* if loopback and allocation succeeded */
+                if (p_msg_qi != NULL) {
+                        __ASSERT_NOTNULL(config.loopback_rule);
+
+                        /* loopback rule is necessarily not null here */
+                        if (config.loopback_rule(p_msg)) {
+                                can_tx_msg_queue(p_msg_qi);
+                        } else {
+                                can_msg_free(p_msg_qi);
+                        }
+                }
+
+                return true;
+        }
+
+        can_msg_free(p_msg_qi);
+        return false;
 }
 
 void can_tx_thread(void *context)
@@ -66,10 +134,14 @@ void can_tx_thread(void *context)
                 mem = (can_message_qi *)k_fifo_get(&can_tx_q, K_FOREVER);
                 can_message *const p_msg = &mem->msg;
 
-                if (can_send(p_msg, K_FOREVER) == 0)
+                if (can_send(p_msg) == 0)
                         can_show_message(p_msg, CAN_DIR_TX);
 
                 can_msg_free(mem);
+
+                /* yield to allow rx thread to process
+                * an incoming message if any */
+                k_yield();
         }
 }
 
@@ -108,11 +180,11 @@ void can_show_message(can_message *msg, uint8_t dir)
         usart_transmit('\n');
 }
 
-uint8_t can_recv(can_message *msg, k_timeout_t timeout)
+uint8_t can_recv(can_message *msg)
 {
         __ASSERT_NOTNULL(msg);
 
-        uint8_t rc = k_mutex_lock(&can_mutex_if, timeout);
+        uint8_t rc = k_mutex_lock(&can_mutex_if, K_MSEC(100));
         if (rc == 0) {
                 rc = -1;
                 if (can.checkReceive() == CAN_MSGAVAIL)
@@ -123,10 +195,10 @@ uint8_t can_recv(can_message *msg, k_timeout_t timeout)
         return rc;
 }
 
-uint8_t can_send(can_message *msg, k_timeout_t timeout)
+uint8_t can_send(can_message *msg)
 {
         __ASSERT_NOTNULL(msg);
-        uint8_t rc = k_mutex_lock(&can_mutex_if, timeout);
+        uint8_t rc = k_mutex_lock(&can_mutex_if, K_MSEC(100));
         if (rc == 0) {
                 rc = can.sendMsgBuf(msg->id, msg->type, msg->len, msg->buffer);
 
@@ -137,3 +209,26 @@ uint8_t can_send(can_message *msg, k_timeout_t timeout)
 
 /*___________________________________________________________________________*/
 
+bool can_loopback_rule(can_message *msg)
+{
+        // static uint32_t id = 0u;
+
+        static uint32_t count = 0u;
+        if (++count > 10u) {
+                count = 0u;
+                return false;
+        }
+        return true;
+}
+
+/*___________________________________________________________________________*/
+
+bool can_cfg_get_loopback(void)
+{
+        return (bool) config.loopback;
+}
+
+void can_cfg_set_loopback(bool state)
+{
+        config.loopback = state ? 1u : 0u;
+}

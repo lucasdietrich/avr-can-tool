@@ -83,7 +83,6 @@ int8_t shell_help_handler(char *cmd, uint8_t len)
                 }
         }
 
-        
         if (module == NULL) {
                 /* get modules list */
                 for (uint8_t i = 0; i < ARRAY_SIZE(modules); i++) {

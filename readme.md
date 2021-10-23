@@ -34,6 +34,16 @@ I 045C [PREE 2] READY   : SP 35/62 -| END @0305
 >
 ```
 
+# Current threads max stack usage
+
+```
+[R] CANARIES until @0128 [found 40], MAX usage = 60 / 100
+[T] CANARIES until @0183 [found 31], MAX usage = 69 / 100
+[>] CANARIES until @025A [found 146], MAX usage = 110 / 256
+[M] CANARIES until @0572 [found 64], MAX usage = 36 / 100
+[I] CANARIES until @02D6 [found 14], MAX usage = 48 / 62
+```
+
 # Commands list
 
 ## `can` module
@@ -89,4 +99,4 @@ kernel wait 5000
 - kernel
 - monitor
         - threads
-        -
+        - canaries
