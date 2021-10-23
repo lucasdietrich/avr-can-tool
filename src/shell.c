@@ -23,20 +23,20 @@ void shell_thread(void *context)
         for (;;) {
                 usart_print("\n# ");
                 command *cmd = (command *)k_fifo_get(&cmd_fifo, K_FOREVER);
+
+                __ASSERT_NOTNULL(cmd);
+
                 switch (cmd->len) {
                 case 0: /* LR only, do nothing */
                         break;
                 case CMD_CANCELLED:
                 {
-                        static const char cancelled[] PROGMEM = "\nCancelled";
-                        usart_print_p(cancelled);
+                        PRINT_PROGMEM_STRING(cancelled, "\nCancelled");
                 }
                 break;
                 case CMD_TOOLONG:
                 {
-                        static const char toolong[] PROGMEM =
-                                "\nToo long, max = 64";
-                        usart_print_p(toolong);
+                        PRINT_PROGMEM_STRING(toolong, "\nToo long, max = 39");
                 }
                 break;
                 default:
@@ -56,7 +56,9 @@ void shell_init(void)
 
 static void send_command(command **command)
 {
+        __ASSERT_NOTNULL(command);
         __ASSERT_NOTNULL(*command);
+
         k_fifo_put(&cmd_fifo, *(void **)command);
         *command = NULL;
 }
@@ -98,9 +100,9 @@ inline void shell_handle_rx(const char rx)
                 if (cmd->len == sizeof(cmd->buffer) - 1u) {
                         cmd->len = CMD_TOOLONG;
                         send_command(&cmd);
-                }
-
-                cmd->buffer[cmd->len++] = rx;
+                } else {
+                        cmd->buffer[cmd->len++] = rx;
+                }                
 
                 /* notify io stream
                  * unoptimal, move console stream in another thread

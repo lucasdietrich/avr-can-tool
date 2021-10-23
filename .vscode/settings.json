@@ -9,6 +9,9 @@
         "unistd.h": "c",
         "arduino.h": "c",
         "parser.h": "c",
-        "can.h": "c"
+        "can.h": "c",
+        "io.h": "c",
+        "mcp2515_can_dfs.h": "c",
+        "shell_can.h": "c"
     }
 }

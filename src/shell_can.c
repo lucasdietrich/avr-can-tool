@@ -41,6 +41,13 @@ int8_t can_shell_handler(char *cmd, uint8_t len)
         return -1;
 }
 
+/* as defined in "mcp2515_can_dfs.h" */
+#define CAN_EXTID (1)
+#define CAN_STDID (0)
+
+#define CAN_MAX_EXTID   (0x1FFFFFFF)
+#define CAN_MAX_STDID   (0x07FF)
+
 int8_t can_handle_tx_command(struct can_command *data, int16_t args)
 {
         int ret;
@@ -58,8 +65,11 @@ int8_t can_handle_tx_command(struct can_command *data, int16_t args)
 
         /* set arbitration id */ 
         can_clear_message(&p_msg->msg);
-        p_msg->msg.id = data->opt;
-
+        p_msg->msg.id = data->opt & CAN_MAX_EXTID; /* max extended ID */
+        
+        /* set standart or extended can message type */
+        p_msg->msg.type = p_msg->msg.id > CAN_MAX_STDID ? CAN_EXTID : CAN_STDID;
+                
         /* set buffer */
         for (uint_fast8_t i = 0; i < 8; i++) {
                 if (CMD_ARG_DEFINED(args, 2 + i)) {

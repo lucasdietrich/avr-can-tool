@@ -13,11 +13,13 @@ extern "C" {
 #define CMD_CANCELLED   -1
 #define CMD_TOOLONG     -2
 
+#define MAX_CMD_LEN     sizeof("can tx 1FFFFFFF FF FF FF FF FF FF FF FF")
+
 typedef struct
 {
         struct qitem _reserved; /* void* */
 
-        char buffer[64]; /* max buffer size : 127 */
+        char buffer[MAX_CMD_LEN]; /* max buffer size : 127 */
         int8_t len;
 } command;
 

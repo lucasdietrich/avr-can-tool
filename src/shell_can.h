@@ -11,7 +11,7 @@ extern "C" {
 struct can_command
 {
         char *cmd;
-        unsigned int opt;
+        long unsigned int opt;
         union
         {
                 struct {

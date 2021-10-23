@@ -14,4 +14,5 @@
     static const char name[] PROGMEM = string;  \
     usart_print_p(name)
     
+    
 #endif /* _DEFINES_H */

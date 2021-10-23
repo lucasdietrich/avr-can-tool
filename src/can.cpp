@@ -7,6 +7,7 @@
 #include <avrtos/kernel.h>
 
 #include <mcp2515_can.h>
+#include <mcp2515_can_dfs.h>
 
 #include "parser.h"
 
@@ -20,7 +21,8 @@ K_MUTEX_DEFINE(can_mutex_if);
 K_THREAD_DEFINE(can_rx, can_rx_thread, 0x64, K_COOPERATIVE, NULL, 'R');
 K_SIGNAL_DEFINE(can_sig_rx);
 
-K_MEM_SLAB_DEFINE(can_msg_pool, sizeof(can_message_qi), 2u);
+/* 2 should be enough : CMD + RX */
+K_MEM_SLAB_DEFINE(can_msg_pool, sizeof(can_message_qi), 2u); 
 K_FIFO_DEFINE(can_tx_q);
 K_THREAD_DEFINE(can_tx, can_tx_thread, 0x64, K_COOPERATIVE, NULL, 'T');
 
@@ -170,7 +172,11 @@ void can_show_message(can_message *msg, uint8_t dir)
         PROGMEM_STRING(s_tx, "TX ");
         usart_print_p((dir == CAN_DIR_RX) ? s_rx : s_tx);
 
-        usart_hex16((uint16_t)msg->id); /* assume STD id */
+        /* if extended if can message */
+        if (msg->type == CAN_EXTID) {
+                usart_hex16((uint16_t) (msg->id >> 16));
+        }
+        usart_hex16((uint16_t)msg->id); /* STD part */
         usart_transmit(':');
 
         for (uint_fast8_t i = 0; i < MIN(msg->len, 8u); i++) {
@@ -187,9 +193,14 @@ uint8_t can_recv(can_message *msg)
         uint8_t rc = k_mutex_lock(&can_mutex_if, K_MSEC(100));
         if (rc == 0) {
                 rc = -1;
-                if (can.checkReceive() == CAN_MSGAVAIL)
+                if (can.checkReceive() == CAN_MSGAVAIL) {
                         rc = can.readMsgBufID(&msg->id, &msg->len, msg->buffer);
-
+                        if (rc == 0) {
+                                msg->type = can.isExtendedFrame()
+                                        ? CAN_EXTID : CAN_STDID;
+                        }
+                }
+                        
                 k_mutex_unlock(&can_mutex_if);
         }
         return rc;
