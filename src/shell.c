@@ -14,7 +14,7 @@
 /*___________________________________________________________________________*/
 
 /* define count > 1 if some commands need time to be parse/processed */
-K_MEM_SLAB_DEFINE(cmd_slab, sizeof(command), 2u);
+K_MEM_SLAB_DEFINE(cmd_slab, sizeof(command), 1u);
 K_FIFO_DEFINE(cmd_fifo);
 K_THREAD_DEFINE(shell, shell_thread, 0x100, K_PREEMPTIVE, NULL, '>');
 
