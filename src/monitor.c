@@ -9,7 +9,7 @@ struct k_signal sig_monitor = K_SIGNAL_INIT(sig_monitor);
 void monitor_thread_entry(void *context)
 {
         for (;;) {
-                int8_t err = k_poll_signal(&sig_monitor, K_SECONDS(60));
+                int8_t err = k_poll_signal(&sig_monitor, K_FOREVER);
                 if (err == 0) {
                         const uint8_t val = sig_monitor.signal;
                         if (TEST_BIT(val, MONITOR_DUMP_CANARIES)) {

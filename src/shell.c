@@ -29,11 +29,6 @@ void shell_thread(void *context)
                 switch (cmd->len) {
                 case 0: /* LR only, do nothing */
                         break;
-                case CMD_CANCELLED:
-                {
-                        PRINT_PROGMEM_STRING(cancelled, "\nCancelled");
-                }
-                break;
                 case CMD_TOOLONG:
                 {
                         PRINT_PROGMEM_STRING(toolong, "\nToo long, max = 39");
@@ -80,10 +75,7 @@ inline void shell_handle_rx(const char rx)
 
         switch (rx) {
         case 0x1A: /* Ctrl + Z -> drop */
-                cmd->len = CMD_CANCELLED;
-                send_command(&cmd);
-                break;
-
+                cmd->len = 0;
         case '\n': /* process the packet */
                 cmd->buffer[cmd->len] = '\0';
                 send_command(&cmd);
