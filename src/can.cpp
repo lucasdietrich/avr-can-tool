@@ -28,7 +28,7 @@ K_THREAD_DEFINE(can_tx, can_tx_thread, 0x64, K_COOPERATIVE, NULL, 'T');
 
 static struct can_config config = {
         {
-                .flags = 0 & CAN_LOOPBACK_FLAG
+                .flags = CAN_RX_FLAG
         },
         .loopback_rule = can_loopback_rule,
         .masks = {0, 0},
@@ -74,6 +74,11 @@ void can_configure(struct can_config *cfg)
 
 ISR(INT0_vect)
 {
+        if (config.rxint) {
+                usart_transmit('*');
+        }
+        
+
         k_signal_raise(&can_sig_rx, 0u);
 }
 
@@ -105,9 +110,12 @@ bool can_process_rx_message(can_message *buffer)
         }
 
         if (can_recv(p_msg) == 0) {
-                /* TX threads is cooperative, p_msg_qi will be deallocated 
-                 * only after this function returned */
-                can_show_message(p_msg, CAN_DIR_RX);
+                if (config.rx) {
+                        /* TX threads is cooperative, p_msg_qi will be deallocated
+                         * only after this function returned
+                         */
+                        can_show_message(p_msg, CAN_DIR_RX);
+                }
 
                 /* if loopback and allocation succeeded */
                 if (p_msg_qi != NULL) {
@@ -243,3 +251,24 @@ void can_cfg_set_loopback(bool state)
 {
         config.loopback = state ? 1u : 0u;
 }
+
+bool can_cfg_get_rx(void)
+{
+        return (bool) config.rx;
+}
+
+void can_cfg_set_rx(bool state)
+{
+        config.rx = state ? 1u : 0u;
+}
+
+bool can_cfg_get_int(void)
+{
+        return (bool) config.rxint;
+}
+
+void can_cfg_set_int(bool state)
+{
+        config.rxint = state ? 1u : 0u;
+}
+

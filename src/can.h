@@ -8,6 +8,8 @@ extern "C" {
 #include "app.h"
 
 #define CAN_LOOPBACK_FLAG (1 << 0)
+#define CAN_RX_FLAG (1 << 1)
+#define CAN_INT_FLAG (1 << 2)
 
 typedef struct 
 {
@@ -32,6 +34,8 @@ struct can_config
                 uint8_t flags;
                 struct {
                         uint8_t loopback : 1;
+                        uint8_t rx : 1;
+                        uint8_t rxint : 1;
                 };
         };
         can_loopback_rule_t loopback_rule;
@@ -66,6 +70,12 @@ bool can_loopback_rule(can_message *msg);
 
 bool can_cfg_get_loopback(void);
 void can_cfg_set_loopback(bool state);
+
+bool can_cfg_get_rx(void);
+void can_cfg_set_rx(bool state);
+
+bool can_cfg_get_int(void);
+void can_cfg_set_int(bool state);
 
 #ifdef __cplusplus
 }

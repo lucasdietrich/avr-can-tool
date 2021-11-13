@@ -100,3 +100,8 @@ kernel wait 5000
 - monitor
         - threads
         - canaries
+
+# Issues
+
+- avr-can tool cannot receive EXTENDED ID can message. Maybe filters mask ? ...
+        - maybe an explanation for the bug where not being able to receive a can message but able to send

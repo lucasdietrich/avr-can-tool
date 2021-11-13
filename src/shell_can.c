@@ -15,9 +15,10 @@ const struct cmd_descr can_command_descr[] PROGMEM = {
         CMD_DESCR(struct can_command, b7, CMD_TYPE_HEX),
 };
 
-// PROGMEM_STRING(rx_s, "rx");
 PROGMEM_STRING(tx_s, "tx");
 PROGMEM_STRING(loopback_s, "loopback");
+PROGMEM_STRING(rx_s, "rx");
+PROGMEM_STRING(int_s, "int");
 
 int8_t can_shell_handler(char *cmd, uint8_t len)
 {
@@ -34,10 +35,13 @@ int8_t can_shell_handler(char *cmd, uint8_t len)
         /* handle can command */
         if (strcmp_P(data.cmd, tx_s) == 0) {
                 return can_handle_tx_command(&data, args);
+        } else if (strcmp_P(data.cmd, rx_s) == 0) {
+                return can_handle_rx_command(&data, args);
+        } else if (strcmp_P(data.cmd, int_s) == 0) {
+                return can_handle_int_command(&data, args);
         } else if (strcmp_P(data.cmd, loopback_s) == 0) {
                 return can_handle_loopback_command(&data, args);
         }
-
         return -1;
 }
 
@@ -88,6 +92,30 @@ int8_t can_handle_tx_command(struct can_command *data, int16_t args)
 exit:
         can_msg_free(p_msg);
         return ret;
+}
+
+int8_t can_handle_rx_command(struct can_command *data, int16_t args)
+{
+        if (CMD_ARG_DEFINED(args, 1)) {
+                can_cfg_set_rx(data->opt);
+        }
+
+        PRINT_PROGMEM_STRING(s, "\n\tcan rx = ");
+        usart_u8(can_cfg_get_rx());
+
+        return 0;
+}
+
+int8_t can_handle_int_command(struct can_command *data, int16_t args)
+{
+        if (CMD_ARG_DEFINED(args, 1)) {
+                can_cfg_set_int(data->opt);
+        }
+
+        PRINT_PROGMEM_STRING(s, "\n\tcan int = ");
+        usart_u8(can_cfg_get_int());
+
+        return 0;
 }
 
 int8_t can_handle_loopback_command(struct can_command *data, int16_t args)
