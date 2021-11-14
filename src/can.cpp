@@ -102,6 +102,8 @@ bool can_process_rx_message(can_message *buffer)
 {
         can_message *p_msg = buffer;
         can_message_qi *p_msg_qi = NULL;
+        
+        static uint16_t received = 0;
 
         if (config.loopback && (config.loopback_rule != NULL)) {
                 if (can_msg_alloc(&p_msg_qi, K_MSEC(100u)) == 0) {
@@ -114,6 +116,8 @@ bool can_process_rx_message(can_message *buffer)
                         /* TX threads is cooperative, p_msg_qi will be deallocated
                          * only after this function returned
                          */
+                        usart_u16(received++);
+                        PRINT_PROGMEM_STRING(count_sep_s, " : ");
                         can_show_message(p_msg, CAN_DIR_RX);
                 }
 
