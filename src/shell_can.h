@@ -15,7 +15,10 @@ struct can_command
         union
         {
                 struct {
-                        unsigned int b0;
+                        union {
+                                unsigned int b0;
+                                unsigned int rtr_len;
+                        };
                         unsigned int b1;
                         unsigned int b2;
                         unsigned int b3;
@@ -31,11 +34,6 @@ struct can_command
 };
 
 int8_t can_shell_handler(char *cmd, uint8_t len);
-
-int8_t can_handle_tx_command(struct can_command *data, int16_t args);
-int8_t can_handle_rx_command(struct can_command *data, int16_t args);
-int8_t can_handle_loopback_command(struct can_command *data, int16_t args);
-int8_t can_handle_int_command(struct can_command *data, int16_t args);
 
 
 #ifdef __cplusplus

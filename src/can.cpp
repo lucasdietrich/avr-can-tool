@@ -22,13 +22,19 @@ K_THREAD_DEFINE(can_rx, can_rx_thread, 0x64, K_COOPERATIVE, NULL, 'R');
 K_SIGNAL_DEFINE(can_sig_rx);
 
 /* 2 should be enough : CMD + RX */
-K_MEM_SLAB_DEFINE(can_msg_pool, sizeof(can_message_qi), 2u); 
+K_MEM_SLAB_DEFINE(can_msg_pool, sizeof(can_message_qi), 2u);
 K_FIFO_DEFINE(can_tx_q);
 K_THREAD_DEFINE(can_tx, can_tx_thread, 0x64, K_COOPERATIVE, NULL, 'T');
 
+#ifdef CONFIG_CAN_CONFIG_FLAGS
+#       define CAN_CONFIG_FLAGS CONFIG_CAN_CONFIG_FLAGS
+#else 
+#       define CAN_CONFIG_FLAGS CAN_RX_FLAG
+#endif
+
 static struct can_config config = {
         {
-                .flags = CAN_RX_FLAG
+                .flags = CAN_CONFIG_FLAGS
         },
         .loopback_rule = can_loopback_rule,
         .masks = {0, 0},
@@ -54,13 +60,13 @@ void can_configure(struct can_config *cfg)
                 PRINT_PROGMEM_STRING(can_fail_msg, "can begin failed retry\n");
                 k_sleep(K_MSEC(500));
         }
-        
+
         can.init_Mask(0, CAN_EXTID, cfg->masks[0]);
         if (cfg->masks[0]) {
                 can.init_Filt(0, CAN_EXTID, cfg->filters[0]);
                 can.init_Filt(1, CAN_EXTID, cfg->filters[1]);
         }
-        
+
         can.init_Mask(1, CAN_EXTID, cfg->masks[1]);
         if (cfg->masks[0]) {
                 can.init_Filt(2, CAN_EXTID, cfg->filters[2]);
@@ -77,7 +83,7 @@ ISR(INT0_vect)
         if (config.rxint) {
                 usart_transmit('*');
         }
-        
+
 
         k_signal_raise(&can_sig_rx, 0u);
 }
@@ -91,7 +97,7 @@ void can_rx_thread(void *context)
                 can_sig_rx.flags = K_POLL_STATE_NOT_READY;
 
                 while (can_process_rx_message(&msg)) {
-                        /* yield to allow tx thread to process 
+                        /* yield to allow tx thread to process
                          * loopback packet if any */
                         k_yield();
                 }
@@ -102,7 +108,7 @@ bool can_process_rx_message(can_message *buffer)
 {
         can_message *p_msg = buffer;
         can_message_qi *p_msg_qi = NULL;
-        
+
         static uint16_t received = 0;
 
         if (config.loopback && (config.loopback_rule != NULL)) {
@@ -184,17 +190,34 @@ void can_show_message(can_message *msg, uint8_t dir)
         PROGMEM_STRING(s_tx, "TX ");
         usart_print_p((dir == CAN_DIR_RX) ? s_rx : s_tx);
 
+        if (msg->isext || msg->rtr) {
+                usart_transmit('-');
+                if (msg->isext) {
+                        usart_transmit('X');
+                }
+                if (msg->rtr) {
+                        usart_transmit('R');
+                }
+                usart_transmit(' ');
+        }
+
         /* if extended if can message */
-        if (msg->type == CAN_EXTID) {
-                usart_hex16((uint16_t) (msg->id >> 16));
+        if (msg->isext == CAN_EXTID) {
+                usart_hex16((uint16_t)(msg->id >> 16));
         }
         usart_hex16((uint16_t)msg->id); /* STD part */
         usart_transmit(':');
 
-        for (uint_fast8_t i = 0; i < MIN(msg->len, 8u); i++) {
-                usart_transmit(' ');
-                usart_hex(msg->buffer[i]);
+        if (!msg->rtr) {
+                for (uint_fast8_t i = 0; i < MIN(msg->len, 8u); i++) {
+                        usart_transmit(' ');
+                        usart_hex(msg->buf[i]);
+                }
+        } else {
+                PRINT_PROGMEM_STRING(rtr_len, "requested len = ");
+                usart_u8(msg->len);
         }
+        
         usart_transmit('\n');
 }
 
@@ -206,13 +229,15 @@ uint8_t can_recv(can_message *msg)
         if (rc == 0) {
                 rc = -1;
                 if (can.checkReceive() == CAN_MSGAVAIL) {
-                        rc = can.readMsgBufID(&msg->id, &msg->len, msg->buffer);
+                        uint8_t isext, rtr;
+                        rc = can.readMsgBufID(can.readRxTxStatus(),
+                                              (unsigned long *)&msg->id, &isext, &rtr,
+                                              &msg->len, msg->buf);
                         if (rc == 0) {
-                                msg->type = can.isExtendedFrame()
-                                        ? CAN_EXTID : CAN_STDID;
+                                msg->isext = isext ? CAN_EXTID : CAN_STDID;
+                                msg->rtr = rtr ? 1 : 0;
                         }
                 }
-                        
                 k_mutex_unlock(&can_mutex_if);
         }
         return rc;
@@ -223,7 +248,8 @@ uint8_t can_send(can_message *msg)
         __ASSERT_NOTNULL(msg);
         uint8_t rc = k_mutex_lock(&can_mutex_if, K_MSEC(100));
         if (rc == 0) {
-                rc = can.sendMsgBuf(msg->id, msg->type, msg->len, msg->buffer);
+                rc = can.sendMsgBuf(msg->id, msg->isext, msg->rtr, msg->len,
+                                    msg->buf, true);
 
                 k_mutex_unlock(&can_mutex_if);
         }
@@ -248,7 +274,7 @@ bool can_loopback_rule(can_message *msg)
 
 bool can_cfg_get_loopback(void)
 {
-        return (bool) config.loopback;
+        return (bool)config.loopback;
 }
 
 void can_cfg_set_loopback(bool state)
@@ -258,7 +284,7 @@ void can_cfg_set_loopback(bool state)
 
 bool can_cfg_get_rx(void)
 {
-        return (bool) config.rx;
+        return (bool)config.rx;
 }
 
 void can_cfg_set_rx(bool state)
@@ -268,7 +294,7 @@ void can_cfg_set_rx(bool state)
 
 bool can_cfg_get_int(void)
 {
-        return (bool) config.rxint;
+        return (bool)config.rxint;
 }
 
 void can_cfg_set_int(bool state)

@@ -13,11 +13,19 @@ extern "C" {
 
 typedef struct 
 {
-        unsigned long id; /* uint32_t */
-        uint8_t type;
-        uint8_t buffer[8];
-        uint8_t len;
-} can_message;
+        union {
+                uint32_t std: 11;
+                uint32_t ext: 29;
+                uint32_t id;
+        };
+        uint8_t isext: 1;
+        uint8_t rtr: 1;
+
+        struct {
+                uint8_t buf[8];
+                uint8_t len;
+        };
+} __attribute__((packed)) can_message;
 
 typedef struct 
 {
