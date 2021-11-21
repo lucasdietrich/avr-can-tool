@@ -11,7 +11,7 @@
 
 /*___________________________________________________________________________*/
 
-static int8_t can_handle_tx_command(struct can_command *data, int16_t args)
+static int8_t build_can_message(struct can_command *data, int16_t args, bool rtr)
 {
         int ret;
         can_message_qi *p_msg = NULL;
@@ -33,18 +33,25 @@ static int8_t can_handle_tx_command(struct can_command *data, int16_t args)
         /* set standart or extended can message type */
         p_msg->msg.isext = p_msg->msg.id > CAN_MAX_STDID ? CAN_EXTID : CAN_STDID;
 
-        /* data message */
-        p_msg->msg.rtr = 0;
-                
-        /* set buffer */
-        for (uint_fast8_t i = 0; i < 8; i++) {
-                if (CMD_ARG_DEFINED(args, 2 + i)) {
-                        p_msg->msg.len++;
-                        p_msg->msg.buf[i] = (uint8_t)data->buffer[i];
-                } else {
-                        break;
+        if (rtr) {
+                /* requested len */
+                if (CMD_ARG_DEFINED(args, 2) && (data->rtr_len <= 8)) {
+                        p_msg->msg.len = data->rtr_len;
+                }
+        } else {
+                /* set buffer */
+                for (uint_fast8_t i = 0; i < 8; i++) {
+                        if (CMD_ARG_DEFINED(args, 2 + i)) {
+                                p_msg->msg.len++;
+                                p_msg->msg.buf[i] = (uint8_t)data->buffer[i];
+                        } else {
+                                break;
+                        }
                 }
         }
+
+        /* data message */
+        p_msg->msg.rtr = (int8_t)rtr;
 
         /* queue can TX message */
         can_tx_msg_queue(p_msg);
@@ -56,42 +63,14 @@ exit:
         return ret;
 }
 
+static int8_t can_handle_tx_command(struct can_command *data, int16_t args)
+{
+        return build_can_message(data, args, false);
+}
+
 static int8_t can_handle_rtr_command(struct can_command *data, int16_t args)
 {
-        int ret;
-        can_message_qi *p_msg = NULL;
-
-        if (!CMD_ARG_DEFINED(args, 1)) {
-                return -1;
-        }
-
-        /* allocate buffer */
-        ret = can_msg_alloc(&p_msg, K_SECONDS(1));
-        if (ret) {
-                goto exit;
-        }
-        /* set arbitration id */ 
-        can_clear_message(&p_msg->msg);
-        p_msg->msg.id = data->opt & CAN_MAX_EXTID; /* max extended ID */
-        
-        /* set standart or extended can message type */
-        p_msg->msg.isext = p_msg->msg.id > CAN_MAX_STDID ? CAN_EXTID : CAN_STDID;
-        
-        /* RTR message */
-        p_msg->msg.rtr = 1;
-
-        /* requested len */
-        if (CMD_ARG_DEFINED(args, 2)) {
-                p_msg->msg.len = data->rtr_len <= 8 ? data->rtr_len : 0;
-        }
-
-        /* queue can TX message */
-        can_tx_msg_queue(p_msg);
-
-        return 0;
-exit:
-        can_msg_free(p_msg);
-        return ret;
+        return build_can_message(data, args, true);
 }
 
 static int8_t can_handle_rx_command(struct can_command *data, int16_t args)
