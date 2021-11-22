@@ -3,27 +3,9 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-/* TODO remove this and initialize from AVRTOS library 
- * - init sections are lost in .a AVRTOS library
- */
-
-void _k_avrtos_init(void)
+void os_init()
 {
-#if KERNEL_DEBUG_PREEMPT_UART
-    UCSR0B = 1 << RXCIE0;
-#endif
-
-    _k_kernel_init();
-    _k_mem_slab_init_module();
-    _k_timer_init_module();
-
-#if THREAD_CANARIES
-    _k_init_thread_canaries();
-#endif
-
-#if KERNEL_SYSCLOCK_AUTO_INIT
-    _k_init_sysclock();
-#endif
+        k_avrtos_init();
 }
 
 // @see "init" function from arduino in "wiring.c"
