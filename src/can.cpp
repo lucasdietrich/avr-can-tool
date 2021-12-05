@@ -32,6 +32,18 @@ K_THREAD_DEFINE(can_tx, can_tx_thread, 0x64, K_COOPERATIVE, NULL, 'T');
 #       define CAN_CONFIG_FLAGS CAN_RX_FLAG
 #endif
 
+#ifdef CONFIG_CAN_INT
+#       define CAN_INT CONFIG_CAN_INT
+#else 
+#       define CAN_INT 0
+#endif
+
+#ifdef CONFIG_CAN_SPEED_16MHZ
+#       define CAN_SPEED MCP_16MHz
+#else 
+#       define CAN_SPEED MCP_8MHz
+#endif
+
 static struct can_config config = {
         {
                 .flags = CAN_CONFIG_FLAGS
@@ -46,17 +58,27 @@ void can_init(void)
 {
         can_configure(&config);
 
-        /* interrupt when receiving a can message (falling on INT0) */
+        /* interrupt when receiving a can message */
+#if CAN_CONFIG_INT == 0
+        /* falling on INT0 */
         EICRA |= 1 << ISC01;
         EICRA &= ~(1 << ISC00);
         EIMSK |= 1 << INT0;
+#elif CAN_CONFIG_INT == 1
+        // falling on INT1
+        EICRA |= 1 << ISC11;
+        EICRA &= ~(1 << ISC10);
+        EIMSK |= 1 << INT1;
+#else
+#       error "Invalid CAN_CONFIG_INT value"
+#endif
 }
 
 void can_configure(struct can_config *cfg)
 {
         k_mutex_lock(&can_mutex_if, K_FOREVER);
 
-        while (CAN_OK != can.begin(cfg->speedset, MCP_8MHz)) {
+        while (CAN_OK != can.begin(cfg->speedset, CAN_SPEED)) {
                 PRINT_PROGMEM_STRING(can_fail_msg, "can begin failed retry\n");
                 k_sleep(K_MSEC(500));
         }
