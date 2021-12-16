@@ -127,7 +127,7 @@ PROGMEM_STRING(rx_s, "rx");
 PROGMEM_STRING(int_s, "int");
 PROGMEM_STRING(rtr_s, "rtr");
 
-int8_t can_shell_handler(char *cmd, uint8_t len)
+int can_shell_handler(char *cmd, uint8_t len)
 {
         int16_t args;
         struct can_command data;
@@ -136,7 +136,7 @@ int8_t can_shell_handler(char *cmd, uint8_t len)
         args = cmd_parse(cmd, len, can_command_descr,
                 ARRAY_SIZE(can_command_descr), &data);
         if (args <= 0 || !CMD_ARG_DEFINED(args, 0)) {
-                return (int8_t)args;
+                return args;
         }
 
         /* handle can command */

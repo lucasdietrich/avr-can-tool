@@ -16,9 +16,9 @@
 /* define count > 1 if some commands need time to be parse/processed */
 K_MEM_SLAB_DEFINE(cmd_slab, sizeof(struct command), 1u);
 K_FIFO_DEFINE(cmd_fifo);
-K_THREAD_DEFINE(shell, shell_thread, 0x100, K_PREEMPTIVE, NULL, '>');
+K_THREAD_DEFINE(shell_thread, shell_entry, 0x100, K_PREEMPTIVE, NULL, '>');
 
-void shell_thread(void *context)
+void shell_entry(void *context)
 {
         for (;;) {
                 usart_print("\n# ");
@@ -114,7 +114,7 @@ ISR(USART_RX_vect)
 
 void shell_dispatch_command(struct command *cmd)
 {
-        int8_t ret = -1;
+        int ret = -1;
         uint8_t skip = 0;
 
         /* execute module hanlder */
@@ -124,7 +124,7 @@ void shell_dispatch_command(struct command *cmd)
                 ret = handler(cmd->buffer + skip, len);
                 if (ret) {
                         printf_P(PSTR("\nFailed to execute module "
-                                      "handler err = %02hhx\n"));
+                                      "handler err = %02hhx\n"), ret);
                 }
         } else {
                 printf_P(PSTR("\nModule not found !\n"));

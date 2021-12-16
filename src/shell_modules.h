@@ -12,7 +12,7 @@ extern "C" {
 
 /*___________________________________________________________________________*/
 
-typedef int8_t (*shell_module_handler_t) (char *cmd, uint8_t len);
+typedef int (*shell_module_handler_t) (char *cmd, uint8_t len);
 
 struct shell_module {
         char name[8];
@@ -33,7 +33,7 @@ shell_module_handler_t shell_get_module_handler(struct command *cmd, uint8_t *sk
 
 /*___________________________________________________________________________*/
 
-int8_t shell_help_handler(char *cmd, uint8_t len);
+int shell_help_handler(char *cmd, uint8_t len);
 
 /*___________________________________________________________________________*/
 

@@ -27,7 +27,7 @@ struct command
 
 void shell_init(void);
 
-void shell_thread(void *context);
+void shell_entry(void *context);
 
 void shell_handle_rx(const char rx);
 

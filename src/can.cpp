@@ -19,13 +19,13 @@ mcp2515_can can(SPI_CS_PIN);
 
 K_MUTEX_DEFINE(can_mutex_if);
 
-K_THREAD_DEFINE(can_rx, can_rx_thread, 0x64, K_COOPERATIVE, NULL, 'R');
+K_THREAD_DEFINE(can_rx_thread, can_rx_entry, 0x64, K_COOPERATIVE, NULL, 'R');
 K_SIGNAL_DEFINE(can_sig_rx);
 
 /* 2 should be enough : CMD + RX */
 K_MEM_SLAB_DEFINE(can_msg_pool, sizeof(can_message_qi), 2u);
 K_FIFO_DEFINE(can_tx_q);
-K_THREAD_DEFINE(can_tx, can_tx_thread, 0x64, K_COOPERATIVE, NULL, 'T');
+K_THREAD_DEFINE(can_tx_thread, can_tx_entry, 0x64, K_COOPERATIVE, NULL, 'T');
 
 #ifdef CONFIG_CAN_CONFIG_FLAGS
 #       define CAN_CONFIG_FLAGS CONFIG_CAN_CONFIG_FLAGS
@@ -146,7 +146,7 @@ ISR(INT0_vect)
         k_signal_raise(&can_sig_rx, 0u);
 }
 
-void can_rx_thread(void *context)
+void can_rx_entry(void *context)
 {
         static can_message msg;
 
@@ -215,7 +215,7 @@ bool can_process_rx_message(can_message *buffer)
         return false;
 }
 
-void can_tx_thread(void *context)
+void can_tx_entry(void *context)
 {
         can_message_qi *mem;
 

@@ -25,6 +25,7 @@
         "stddef.h": "c",
         "caniot_common.h": "c",
         "stdbool.h": "c",
-        "caniot_errors.h": "c"
+        "caniot_errors.h": "c",
+        "errno.h": "c"
     }
 }

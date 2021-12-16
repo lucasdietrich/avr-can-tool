@@ -3,7 +3,7 @@
 #include <caniot.h>
 #include <controller.h>
 
-#include <avrtos/prng.h>
+#include <avrtos/kernel.h>
 
 #include "osspec.h"
 #include "can.h"
@@ -112,6 +112,32 @@ int caniot_controller_process_frame(can_message *msg)
         }
 
         return caniot_controller_handle_rx_frame(&controller, &frame);
+}
+
+struct k_signal query_sig;
+
+static int query_callback(union deviceid did,
+                          struct caniot_frame *resp)
+{
+        k_signal_raise(&query_sig, resp == NULL);
+
+        return 0;
+}
+
+int request_telemetry(union deviceid did, uint8_t ep, k_timeout_t timeout)
+{
+        int ret;
+
+        int32_t tm = K_TIMEOUT_EQ(timeout, K_FOREVER) ?
+                ((int32_t)-1) : (int32_t)timeout.value;
+
+        ret = caniot_request_telemetry(&controller, did, ep, query_callback, tm);
+        if (ret != 0 && k_poll_signal(&query_sig, K_FOREVER) == 0) {
+                K_SIGNAL_SET_UNREADY(&query_sig);
+                printf("%hhx", query_sig.signal);
+        }
+
+        return ret;
 }
 
 #endif /* defined(CONFIG_CANIOT_LIB) */

@@ -59,8 +59,8 @@ static inline void can_clear_message(can_message *msg)
 
 void can_init(void);
 void can_configure(struct can_config *cfg);
-void can_rx_thread(void *context);
-void can_tx_thread(void *context);
+void can_rx_entry(void *context);
+void can_tx_entry(void *context);
 bool can_process_rx_message(can_message *buffer);
 
 int8_t can_msg_alloc(can_message_qi **msg, k_timeout_t timeout);

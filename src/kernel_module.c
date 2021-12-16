@@ -16,9 +16,9 @@ static const struct cmd_descr kernel_command_descr[] PROGMEM = {
 
 K_PRNG_DEFINE_DEFAULT(prng);
 
-int8_t kernel_shell_handler(char *cmd, uint8_t len)
+int kernel_shell_handler(char *cmd, uint8_t len)
 {
-        int8_t ret = -1;
+        int ret = -1;
 
         struct kernel_command data;
         ret = cmd_parse(cmd, len, kernel_command_descr,
@@ -71,6 +71,6 @@ int8_t kernel_shell_handler(char *cmd, uint8_t len)
 void show_uptime(void)
 {
         uint32_t now = k_uptime_get_ms32();
-        printf_P(PSTR("now = %lu ms\n"), now);
+        printf_P(PSTR("now = %lu.%03lu s\n"), now / 1000, now % 1000);
 }
 

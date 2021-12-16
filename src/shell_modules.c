@@ -3,6 +3,7 @@
 #include "parser.h"
 #include "shell_can.h"
 #include "kernel_module.h"
+#include "shell_caniot.h"
 
 /*___________________________________________________________________________*/
 
@@ -35,12 +36,17 @@ PROGMEM_STRING(
         "\t> kernel threads\n"
 );
 
+#define SHELL_SHORTCUT 1
+
 static const struct shell_module modules[] PROGMEM = {
         SHELL_MODULE("can", can_shell_handler, can_help),
-        SHELL_MODULE("caniot", NULL, NULL),
         SHELL_MODULE("kernel", kernel_shell_handler, kernel_help),
-        // SHELL_MODULE("monitor", monitor_shell_handler, monitor_help),
+        SHELL_MODULE("caniot", shell_caniot_handler, NULL),
         SHELL_MODULE("help", shell_help_handler, NULL),
+#if SHELL_SHORTCUT
+        SHELL_MODULE("k", kernel_shell_handler, kernel_help), /* k is a shortcut for kernel */
+        SHELL_MODULE("ct", shell_caniot_handler, NULL), /* "ct" is a shortcut for caniot */
+#endif /* SHELL_SHORTCUT */
 };
 
 shell_module_handler_t shell_get_module_handler(struct command *cmd, uint8_t *skip) {
@@ -49,9 +55,13 @@ shell_module_handler_t shell_get_module_handler(struct command *cmd, uint8_t *sk
         shell_module_handler_t handler = NULL;
 
         for(uint8_t i = 0; i < ARRAY_SIZE(modules); i++) {
-                const char name_len = pgm_read_byte(&modules[i].name_len);
-                if (strncmp_P(cmd->buffer, modules[i].name, name_len) == 0) {
+                const unsigned char name_len = pgm_read_byte(&modules[i].name_len);
+                if ((strncmp_P(cmd->buffer, modules[i].name, name_len) == 0) &&
+                    ((cmd->len == name_len) ||
+                     (cmd->buffer[name_len] == ' '))) {
                         handler = pgm_read_ptr(&modules[i].handler);
+                        
+                        /* tell how many to skip to get subcommand if any*/
                         *skip = name_len + 1u;
                         break;
                 }
@@ -70,7 +80,7 @@ static const struct cmd_descr shell_help_module[] PROGMEM = {
         CMD_DESCR(struct shell_help_module, module_name, CMD_TYPE_STRING),
 };
 
-int8_t shell_help_handler(char *cmd, uint8_t len)
+int shell_help_handler(char *cmd, uint8_t len)
 {
         const struct shell_module *module = NULL;
 

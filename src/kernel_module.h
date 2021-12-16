@@ -13,7 +13,7 @@ extern "C" {
 
 void show_uptime(void);
 
-int8_t kernel_shell_handler(char *cmd, uint8_t len);
+int kernel_shell_handler(char *cmd, uint8_t len);
 
 /*___________________________________________________________________________*/
 
