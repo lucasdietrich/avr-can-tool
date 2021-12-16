@@ -15,29 +15,35 @@ PROGMEM_STRING(can_help,
         "\t> can tx 20F AA BB CC DD\n"
 );
 
-PROGMEM_STRING(
-        monitor_help,
-        "- monitor threads\n"
-        "- monitor canaries\n"
-);
+// PROGMEM_STRING(
+//         monitor_help,
+//         "- monitor threads\n"
+//         "- monitor canaries\n"
+// );
 
 PROGMEM_STRING(
         kernel_help,
         "- wait {delay_ms}\n"
         "\t> kernel wait 1000\n"
-        "- random\n"
-        "\t> kernel random\n"
+        "- prng\n"
+        "\t> kernel prng\n"
+        "- uptime\n"
+        "\t> kernel uptime\n"
+        "- canaries\n"
+        "\t> kernel canaries\n"
+        "- threads\n"
+        "\t> kernel threads\n"
 );
 
 static const struct shell_module modules[] PROGMEM = {
         SHELL_MODULE("can", can_shell_handler, can_help),
         SHELL_MODULE("caniot", NULL, NULL),
         SHELL_MODULE("kernel", kernel_shell_handler, kernel_help),
-        SHELL_MODULE("monitor", monitor_shell_handler, monitor_help),
+        // SHELL_MODULE("monitor", monitor_shell_handler, monitor_help),
         SHELL_MODULE("help", shell_help_handler, NULL),
 };
 
-shell_module_handler_t shell_get_module_handler(command *cmd, uint8_t *skip) {
+shell_module_handler_t shell_get_module_handler(struct command *cmd, uint8_t *skip) {
         __ASSERT_NOTNULL(cmd);
 
         shell_module_handler_t handler = NULL;
@@ -64,9 +70,6 @@ static const struct cmd_descr shell_help_module[] PROGMEM = {
         CMD_DESCR(struct shell_help_module, module_name, CMD_TYPE_STRING),
 };
 
-PROGMEM_STRING(s1, "\n\t");
-PROGMEM_STRING(module_no_description_s, "Module has no description");
-
 int8_t shell_help_handler(char *cmd, uint8_t len)
 {
         const struct shell_module *module = NULL;
@@ -86,7 +89,7 @@ int8_t shell_help_handler(char *cmd, uint8_t len)
         if (module == NULL) {
                 /* get modules list */
                 for (uint8_t i = 0; i < ARRAY_SIZE(modules); i++) {
-                        usart_print_p(s1);
+                        printf_P(PSTR("\n\t"));
                         usart_print_p(modules[i].name);
                 }
         } else {
@@ -94,7 +97,7 @@ int8_t shell_help_handler(char *cmd, uint8_t len)
                 const char *descr_p = pgm_read_ptr(&module->help);
                 usart_transmit('\n');
                 usart_print_p(descr_p == NULL
-                        ? module_no_description_s
+                        ? PSTR("Module has no description")
                         : descr_p);
         }
 

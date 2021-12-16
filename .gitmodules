@@ -2,3 +2,7 @@
 	path = lib/AVRTOS
 	url = git@github.com:Adecy/AVRTOS.git
 	branch = kernel_init_c
+[submodule "lib/caniot-lib"]
+	path = lib/caniot-lib
+	url = https://github.com/lucasdietrich/caniot-lib
+	branch = master

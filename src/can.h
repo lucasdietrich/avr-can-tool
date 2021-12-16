@@ -67,9 +67,6 @@ int8_t can_msg_alloc(can_message_qi **msg, k_timeout_t timeout);
 void can_tx_msg_queue(can_message_qi *msg);
 void can_msg_free(can_message_qi *msg);
 
-uint8_t can_recv(can_message *msg);
-uint8_t can_send(can_message *msg);
-
 #define CAN_DIR_RX      1
 #define CAN_DIR_TX      0
 void can_show_message(can_message *msg, uint8_t dir);

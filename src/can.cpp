@@ -10,6 +10,7 @@
 #include <mcp2515_can_dfs.h>
 
 #include "parser.h"
+#include "caniot_controller.h"
 
 #define K_MODULE K_MODULE_CAN
 #define SPI_CS_PIN  10
@@ -79,7 +80,7 @@ void can_configure(struct can_config *cfg)
         k_mutex_lock(&can_mutex_if, K_FOREVER);
 
         while (CAN_OK != can.begin(cfg->speedset, CAN_SPEED)) {
-                PRINT_PROGMEM_STRING(can_fail_msg, "can begin failed retry\n");
+                printf_P(PSTR("can begin failed retry\n"));
                 k_sleep(K_MSEC(500));
         }
 
@@ -98,6 +99,41 @@ void can_configure(struct can_config *cfg)
         }
 
         k_mutex_unlock(&can_mutex_if);
+}
+
+static uint8_t can_recv(can_message *msg)
+{
+        __ASSERT_NOTNULL(msg);
+
+        uint8_t rc = k_mutex_lock(&can_mutex_if, K_MSEC(100));
+        if (rc == 0) {
+                rc = -1;
+                if (can.checkReceive() == CAN_MSGAVAIL) {
+                        uint8_t isext, rtr;
+                        rc = can.readMsgBufID(can.readRxTxStatus(),
+                                              (unsigned long *)&msg->id, &isext, &rtr,
+                                              &msg->len, msg->buf);
+                        if (rc == 0) {
+                                msg->isext = isext ? CAN_EXTID : CAN_STDID;
+                                msg->rtr = rtr ? 1 : 0;
+                        }
+                }
+                k_mutex_unlock(&can_mutex_if);
+        }
+        return rc;
+}
+
+static uint8_t can_send(can_message *msg)
+{
+        __ASSERT_NOTNULL(msg);
+        uint8_t rc = k_mutex_lock(&can_mutex_if, K_MSEC(100));
+        if (rc == 0) {
+                rc = can.sendMsgBuf(msg->id, msg->isext, msg->rtr, msg->len,
+                                    msg->buf, true);
+
+                k_mutex_unlock(&can_mutex_if);
+        }
+        return rc;
 }
 
 ISR(INT0_vect)
@@ -128,6 +164,7 @@ void can_rx_thread(void *context)
 
 bool can_process_rx_message(can_message *buffer)
 {
+        int ret;
         can_message *p_msg = buffer;
         can_message_qi *p_msg_qi = NULL;
 
@@ -140,14 +177,24 @@ bool can_process_rx_message(can_message *buffer)
         }
 
         if (can_recv(p_msg) == 0) {
+                /* TX threads is cooperative, p_msg_qi will be deallocated
+                 * only after the frame is processed
+                 */
+
+
+                /* show the received packet */
                 if (config.rx) {
-                        /* TX threads is cooperative, p_msg_qi will be deallocated
-                         * only after this function returned
-                         */
-                        usart_u16(received++);
-                        PRINT_PROGMEM_STRING(count_sep_s, " : ");
+                        printf_P(PSTR("%u : "), received++);
                         can_show_message(p_msg, CAN_DIR_RX);
                 }
+
+                /* if the packet should be processed as a caniot packet */
+#if defined(CONFIG_CANIOT_LIB)
+                ret = caniot_controller_process_frame(p_msg);
+                if (ret != 0) {
+                        printf_P(PSTR("CANIOT frame processing failed\n"));
+                }
+#endif
 
                 /* if loopback and allocation succeeded */
                 if (p_msg_qi != NULL) {
@@ -223,7 +270,7 @@ void can_show_message(can_message *msg, uint8_t dir)
                 usart_transmit(' ');
         }
 
-        /* if extended if can message */
+        /* if extended can message */
         if (msg->isext == CAN_EXTID) {
                 usart_hex16((uint16_t)(msg->id >> 16));
         }
@@ -236,46 +283,10 @@ void can_show_message(can_message *msg, uint8_t dir)
                         usart_hex(msg->buf[i]);
                 }
         } else {
-                PRINT_PROGMEM_STRING(rtr_len, "requested len = ");
-                usart_u8(msg->len);
+                printf_P(PSTR("requested len = %02hhx"), msg->len);
         }
         
         usart_transmit('\n');
-}
-
-uint8_t can_recv(can_message *msg)
-{
-        __ASSERT_NOTNULL(msg);
-
-        uint8_t rc = k_mutex_lock(&can_mutex_if, K_MSEC(100));
-        if (rc == 0) {
-                rc = -1;
-                if (can.checkReceive() == CAN_MSGAVAIL) {
-                        uint8_t isext, rtr;
-                        rc = can.readMsgBufID(can.readRxTxStatus(),
-                                              (unsigned long *)&msg->id, &isext, &rtr,
-                                              &msg->len, msg->buf);
-                        if (rc == 0) {
-                                msg->isext = isext ? CAN_EXTID : CAN_STDID;
-                                msg->rtr = rtr ? 1 : 0;
-                        }
-                }
-                k_mutex_unlock(&can_mutex_if);
-        }
-        return rc;
-}
-
-uint8_t can_send(can_message *msg)
-{
-        __ASSERT_NOTNULL(msg);
-        uint8_t rc = k_mutex_lock(&can_mutex_if, K_MSEC(100));
-        if (rc == 0) {
-                rc = can.sendMsgBuf(msg->id, msg->isext, msg->rtr, msg->len,
-                                    msg->buf, true);
-
-                k_mutex_unlock(&can_mutex_if);
-        }
-        return rc;
 }
 
 /*___________________________________________________________________________*/

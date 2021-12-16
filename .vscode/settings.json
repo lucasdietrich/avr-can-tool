@@ -12,6 +12,19 @@
         "can.h": "c",
         "io.h": "c",
         "mcp2515_can_dfs.h": "c",
-        "shell_can.h": "c"
+        "shell_can.h": "c",
+        "caniot.h": "c",
+        "caniot_controller.h": "c",
+        "controller.h": "c",
+        "PGMSPACE.H": "cpp",
+        "helper.h": "c",
+        "stdint.h": "c",
+        "stdio.h": "c",
+        "tempsens.h": "c",
+        "device.h": "c",
+        "stddef.h": "c",
+        "caniot_common.h": "c",
+        "stdbool.h": "c",
+        "caniot_errors.h": "c"
     }
 }

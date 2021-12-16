@@ -15,13 +15,13 @@ extern "C" {
 
 #define MAX_CMD_LEN     sizeof("can tx 1FFFFFFF FF FF FF FF FF FF FF FF")
 
-typedef struct
+struct command
 {
         struct qitem _reserved; /* void* */
 
         char buffer[MAX_CMD_LEN]; /* max buffer size : 127 */
         int8_t len;
-} command;
+};
 
 /*___________________________________________________________________________*/
 
@@ -34,7 +34,7 @@ void shell_handle_rx(const char rx);
 /*___________________________________________________________________________*/
 
 /* dispatcher */
-void shell_dispatch_command(command *cmd);
+void shell_dispatch_command(struct command *cmd);
 
 /*___________________________________________________________________________*/
 

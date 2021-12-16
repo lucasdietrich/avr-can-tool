@@ -79,8 +79,7 @@ static int8_t can_handle_rx_command(struct can_command *data, int16_t args)
                 can_cfg_set_rx(data->opt);
         }
 
-        PRINT_PROGMEM_STRING(s, "\n\tcan rx = ");
-        usart_u8(can_cfg_get_rx());
+        printf_P(PSTR("\n\tcan rx = %02hhx"), can_cfg_get_rx());
 
         return 0;
 }
@@ -91,8 +90,7 @@ static int8_t can_handle_int_command(struct can_command *data, int16_t args)
                 can_cfg_set_int(data->opt);
         }
 
-        PRINT_PROGMEM_STRING(s, "\n\tcan int = ");
-        usart_u8(can_cfg_get_int());
+        printf_P(PSTR("\n\tcan int = %02hhx"), can_cfg_get_int());
 
         return 0;
 }
@@ -103,8 +101,7 @@ static int8_t can_handle_loopback_command(struct can_command *data, int16_t args
                 can_cfg_set_loopback(data->opt);
         }
 
-        PRINT_PROGMEM_STRING(s, "\n\tcan loopback = ");
-        usart_u8(can_cfg_get_loopback());
+        printf_P(PSTR("\n\tcan loopback = %02hhx"), can_cfg_get_loopback());
 
         return 0;
 }

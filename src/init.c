@@ -3,8 +3,28 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-void os_init()
+#include <stdio.h>
+
+static int uart_putchar(char c, FILE *stream)
 {
+        ARG_UNUSED(stream);
+
+        usart_transmit(c);
+
+        return 0;
+}
+
+/* https://www.avrfreaks.net/forum/mystdout-file-declaration-returning-error */
+static void __attribute__((__constructor__, __used__))
+uart_init_stdout(void)
+{
+        static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
+
+        stdout = &mystdout;
+}
+
+void os_init()
+{        
         k_avrtos_init();
 }
 

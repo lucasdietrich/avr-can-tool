@@ -14,7 +14,7 @@
 /*___________________________________________________________________________*/
 
 /* define count > 1 if some commands need time to be parse/processed */
-K_MEM_SLAB_DEFINE(cmd_slab, sizeof(command), 1u);
+K_MEM_SLAB_DEFINE(cmd_slab, sizeof(struct command), 1u);
 K_FIFO_DEFINE(cmd_fifo);
 K_THREAD_DEFINE(shell, shell_thread, 0x100, K_PREEMPTIVE, NULL, '>');
 
@@ -22,7 +22,7 @@ void shell_thread(void *context)
 {
         for (;;) {
                 usart_print("\n# ");
-                command *cmd = (command *)k_fifo_get(&cmd_fifo, K_FOREVER);
+                struct command *cmd = (struct command *)k_fifo_get(&cmd_fifo, K_FOREVER);
 
                 __ASSERT_NOTNULL(cmd);
 
@@ -31,7 +31,7 @@ void shell_thread(void *context)
                         break;
                 case CMD_TOOLONG:
                 {
-                        PRINT_PROGMEM_STRING(toolong, "\nToo long, max = 39");
+                        printf_P(PSTR("\nToo long, max = 39"));
                 }
                 break;
                 default:
@@ -49,18 +49,18 @@ void shell_init(void)
         SET_BIT(UCSR0B, 1 << RXCIE0);
 }
 
-static void send_command(command **command)
+static void send_command(struct command **cmd)
 {
-        __ASSERT_NOTNULL(command);
-        __ASSERT_NOTNULL(*command);
+        __ASSERT_NOTNULL(cmd);
+        __ASSERT_NOTNULL(*cmd);
 
-        k_fifo_put(&cmd_fifo, *(void **)command);
-        *command = NULL;
+        k_fifo_put(&cmd_fifo, *(void **)cmd);
+        *cmd = NULL;
 }
 
 inline void shell_handle_rx(const char rx)
 {
-        static command *cmd = NULL;
+        static struct command *cmd = NULL;
 
         if (cmd == NULL) {
                 if (k_mem_slab_alloc(&cmd_slab, (void **)&cmd, K_NO_WAIT) != 0) {
@@ -112,10 +112,7 @@ ISR(USART_RX_vect)
 
 /*___________________________________________________________________________*/
 
-PROGMEM_STRING(dispatch_notfound, "\nModule not found !\n");
-PROGMEM_STRING(dispatch_failed, "\nFailed to execute module handler err = ");
-
-void shell_dispatch_command(command *cmd)
+void shell_dispatch_command(struct command *cmd)
 {
         int8_t ret = -1;
         uint8_t skip = 0;
@@ -126,12 +123,11 @@ void shell_dispatch_command(command *cmd)
                 const uint8_t len = skip >= cmd->len ? 0u : cmd->len - skip;
                 ret = handler(cmd->buffer + skip, len);
                 if (ret) {
-                        usart_print_p(dispatch_failed);
-                        usart_hex(ret);
-                        usart_transmit('\n');
+                        printf_P(PSTR("\nFailed to execute module "
+                                      "handler err = %02hhx\n"));
                 }
         } else {
-                usart_print_p(dispatch_notfound);
+                printf_P(PSTR("\nModule not found !\n"));
         }
 }
 

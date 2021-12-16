@@ -2,9 +2,13 @@
 
 #include "app.h"
 
+#include <stdio.h>
+
 int main()
 {
         app_init();
-
-        monitor_thread_entry(NULL);
+        
+        for (;;) {
+                k_sleep(K_SECONDS(5));
+        }
 }

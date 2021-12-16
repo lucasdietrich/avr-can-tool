@@ -6,6 +6,8 @@
 
 struct k_signal sig_monitor = K_SIGNAL_INIT(sig_monitor);
 
+K_THREAD_DEFINE(monitor_thread, monitor_thread_entry, 0x50, K_PREEMPTIVE, NULL, 'R');
+
 void monitor_thread_entry(void *context)
 {
         for (;;) {
