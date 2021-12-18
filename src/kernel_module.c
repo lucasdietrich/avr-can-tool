@@ -25,8 +25,6 @@ int kernel_shell_handler(char *cmd, uint8_t len)
                 ARRAY_SIZE(kernel_command_descr), &data);
         if (ret > 0 && CMD_ARG_DEFINED(ret, 0)) {
                 
-                printf_P(PSTR("\n"));
-                
                 /* kernel sleep */
                 if (strcmp_P(data.what, PSTR("wait")) == 0) {
                         uint16_t delay_ms = 1000u;
@@ -41,10 +39,8 @@ int kernel_shell_handler(char *cmd, uint8_t len)
                 } else if (strcmp_P(data.what, PSTR("prng")) == 0) {
                         uint8_t buffer[10];
                         k_prng_get_buffer(&prng, buffer, sizeof(buffer));
-
+                        printf_P(PSTR(" : "));
                         for (uint8_t i = 0; i < sizeof(buffer); i++) {
-                                // usart_hex(buffer[i]);
-                                // usart_transmit(' ');
                                 printf_P(PSTR("%02hhx "), buffer[i]);
                         }
                         ret = 0;
@@ -56,11 +52,13 @@ int kernel_shell_handler(char *cmd, uint8_t len)
 
                 /* threads canaries */
                 } else if (strcmp_P(data.what, PSTR("canaries")) == 0) {
+                        printf_P(PSTR("\n"));
                         dump_threads_canaries();
                         ret = 0;
 
                 /* threads */
                 } else if (strcmp_P(data.what, PSTR("threads")) == 0) {
+                        printf_P(PSTR("\n"));
                         k_thread_dump_all();
                         ret = 0;
                 }
@@ -70,7 +68,15 @@ int kernel_shell_handler(char *cmd, uint8_t len)
 
 void show_uptime(void)
 {
-        uint32_t now = k_uptime_get_ms32();
-        printf_P(PSTR("now = %lu.%03lu s\n"), now / 1000, now % 1000);
+        struct timespec ts;
+        k_timespec_get(&ts);
+
+        uint32_t seconds = ts.tv_sec;
+        uint32_t minutes = seconds / 60;
+        uint32_t hours = minutes / 60;
+
+        printf_P(PSTR(" : %02lu:%02hhu:%02hhu [%lu.%03u s]"),
+                 hours, (uint8_t)(minutes % 60), (uint8_t)(seconds % 60),
+                 ts.tv_sec, ts.tv_msec);
 }
 
