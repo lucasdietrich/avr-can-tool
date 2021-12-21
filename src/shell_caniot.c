@@ -38,7 +38,7 @@ static bool is_device_api(char *cmd)
 static int device_api_handler(char *cmd, uint8_t len)
 {
         if (len == 0) {
-                if (caniot_is_class_broadcast(cur_device)) {
+                if (caniot_is_broadcast(cur_device)) {
                         printf_P(PSTR(" : BROADCAST"));
                 } else {
                         printf_P(PSTR(" : %d"), cur_device);

@@ -75,34 +75,14 @@ static const struct caniot_drivers_api drv = {
         .pending_telemetry = NULL,
 };
 
-static const struct caniot_controller_config cfg = {
-        .store_telemetry = 0,
-};
-
 static struct caniot_controller controller = {
         .name = "avr-can-tool Controller",
         .uid = 0x00000001,
-        .telemetry_db = NULL,
-        .driv = &drv,
-        .cfg = &cfg
+        .driv = &drv
 };
 
-static bool is_caniot_frame(can_message *msg)
+int process_caniot_frame(can_message *msg)
 {
-        return msg->ext == 0 && msg->rtr == 0;
-}
-
-int caniot_controller_process_frame(can_message *msg)
-{
-        if (msg == 0) {
-                return -EINVAL;
-        }
-
-        /* not processable as a CANIOT frame */
-        if (is_caniot_frame(msg) == false) {
-                return -CANIOT_ENPROC;
-        }
-
         struct caniot_frame frame;
         int ret;
 

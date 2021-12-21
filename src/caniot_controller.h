@@ -7,7 +7,11 @@
 extern "C" {
 #endif
 
-int caniot_controller_process_frame(can_message *msg);
+union deviceid;
+
+int process_caniot_frame(can_message *msg);
+
+int request_telemetry(union deviceid did, uint8_t ep, k_timeout_t timeout);
 
 #ifdef __cplusplus
 }

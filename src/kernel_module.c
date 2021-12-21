@@ -53,7 +53,7 @@ int kernel_shell_handler(char *cmd, uint8_t len)
                 /* threads canaries */
                 } else if (strcmp_P(data.what, PSTR("canaries")) == 0) {
                         printf_P(PSTR("\n"));
-                        dump_threads_canaries();
+                        dump_stack_canaries();
                         ret = 0;
 
                 /* threads */

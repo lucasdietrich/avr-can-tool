@@ -121,12 +121,6 @@ const struct cmd_descr can_command_descr[] PROGMEM = {
         CMD_DESCR(struct can_command, b7, CMD_TYPE_HEX),
 };
 
-PROGMEM_STRING(tx_s, "tx");
-PROGMEM_STRING(loopback_s, "loopback");
-PROGMEM_STRING(rx_s, "rx");
-PROGMEM_STRING(int_s, "int");
-PROGMEM_STRING(rtr_s, "rtr");
-
 int can_shell_handler(char *cmd, uint8_t len)
 {
         int16_t args;
@@ -140,15 +134,15 @@ int can_shell_handler(char *cmd, uint8_t len)
         }
 
         /* handle can command */
-        if (strcmp_P(data.cmd, tx_s) == 0) {
+        if (strcmp_P(data.cmd, PSTR("tx")) == 0) {
                 return can_handle_tx_command(&data, args);
-        } else if (strcmp_P(data.cmd, rx_s) == 0) {
+        } else if (strcmp_P(data.cmd, PSTR("rx")) == 0) {
                 return can_handle_rx_command(&data, args);
-        } else if (strcmp_P(data.cmd, int_s) == 0) {
+        } else if (strcmp_P(data.cmd, PSTR("int")) == 0) {
                 return can_handle_int_command(&data, args);
-        } else if (strcmp_P(data.cmd, loopback_s) == 0) {
+        } else if (strcmp_P(data.cmd, PSTR("loopback")) == 0) {
                 return can_handle_loopback_command(&data, args);
-        } else if (strcmp_P(data.cmd, rtr_s) == 0) {
+        } else if (strcmp_P(data.cmd, PSTR("rtr")) == 0) {
                 return can_handle_rtr_command(&data, args);
         }
         return -1;

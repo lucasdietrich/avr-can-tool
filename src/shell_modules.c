@@ -11,20 +11,11 @@
 
 /*___________________________________________________________________________*/
 
-PROGMEM_STRING(can_help,
+static const char can_help[] PROGMEM =
         "- can tx {id} {b1} {b2} {b3} {b4} {b5} {b6} {b7}\n"
-        "\t> can tx 20F AA BB CC DD\n"
-);
+        "\t> can tx 20F AA BB CC DD\n";
 
-// PROGMEM_STRING(
-//         monitor_help,
-//         "- monitor threads\n"
-//         "- monitor canaries\n"
-// );
-
-PROGMEM_STRING(
-        kernel_help,
-        "- wait {delay_ms}\n"
+static const char kernel_help[] PROGMEM = "- wait {delay_ms}\n"
         "\t> kernel wait 1000\n"
         "- prng\n"
         "\t> kernel prng\n"
@@ -33,8 +24,7 @@ PROGMEM_STRING(
         "- canaries\n"
         "\t> kernel canaries\n"
         "- threads\n"
-        "\t> kernel threads\n"
-);
+        "\t> kernel threads\n";
 
 #define SHELL_SHORTCUT 1
 

@@ -190,9 +190,9 @@ bool can_process_rx_message(can_message *buffer)
 
                 /* if the packet should be processed as a caniot packet */
 #if defined(CONFIG_CANIOT_LIB)
-                ret = caniot_controller_process_frame(p_msg);
+                ret = process_caniot_frame(p_msg);
                 if (ret != 0) {
-                        printf_P(PSTR("CANIOT frame processing failed\n"));
+                        printf_P(PSTR("CANIOT frame processing failed : -%lx\n"), -ret);
                 }
 #endif
 
@@ -255,9 +255,7 @@ void can_msg_free(can_message_qi *msg)
 
 void can_show_message(can_message *msg, uint8_t dir)
 {
-        PROGMEM_STRING(s_rx, "RX ");
-        PROGMEM_STRING(s_tx, "TX ");
-        usart_print_p((dir == CAN_DIR_RX) ? s_rx : s_tx);
+        usart_print_p((dir == CAN_DIR_RX) ? PSTR("TX ") : PSTR("RX "));
 
         if (msg->isext || msg->rtr) {
                 usart_transmit('-');
