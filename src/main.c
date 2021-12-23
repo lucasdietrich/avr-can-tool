@@ -7,6 +7,8 @@
 int main()
 {
         app_init();
+
+        irq_enable();
         
         for (;;) {
                 k_sleep(K_SECONDS(5));

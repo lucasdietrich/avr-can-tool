@@ -39,10 +39,10 @@ K_THREAD_DEFINE(can_tx_thread, can_tx_entry, 0x64, K_COOPERATIVE, NULL, 'T');
 #       define CAN_INT 0
 #endif
 
-#ifdef CONFIG_CAN_SPEED_16MHZ
-#       define CAN_SPEED MCP_16MHz
+#ifdef CONFIG_CAN_CLOCKSET_16MHZ
+#       define CAN_CLOCKSET MCP_16MHz
 #else 
-#       define CAN_SPEED MCP_8MHz
+#       define CAN_CLOCKSET MCP_8MHz
 #endif
 
 static struct can_config config = {
@@ -60,12 +60,12 @@ void can_init(void)
         can_configure(&config);
 
         /* interrupt when receiving a can message */
-#if CAN_CONFIG_INT == 0
+#if CAN_INT == 0
         /* falling on INT0 */
         EICRA |= 1 << ISC01;
         EICRA &= ~(1 << ISC00);
         EIMSK |= 1 << INT0;
-#elif CAN_CONFIG_INT == 1
+#elif CAN_INT == 1
         // falling on INT1
         EICRA |= 1 << ISC11;
         EICRA &= ~(1 << ISC10);
@@ -79,7 +79,7 @@ void can_configure(struct can_config *cfg)
 {
         k_mutex_lock(&can_mutex_if, K_FOREVER);
 
-        while (CAN_OK != can.begin(cfg->speedset, CAN_SPEED)) {
+        while (CAN_OK != can.begin(cfg->speedset, CAN_CLOCKSET)) {
                 printf_P(PSTR("can begin failed retry\n"));
                 k_sleep(K_MSEC(500));
         }
@@ -136,7 +136,11 @@ static uint8_t can_send(can_message *msg)
         return rc;
 }
 
+#if CAN_INT == 0
 ISR(INT0_vect)
+#else
+ISR(INT1_vect)
+#endif /* CAN_INT */
 {
         if (config.rxint) {
                 usart_transmit('*');
@@ -164,7 +168,6 @@ void can_rx_entry(void *context)
 
 bool can_process_rx_message(can_message *buffer)
 {
-        int ret;
         can_message *p_msg = buffer;
         can_message_qi *p_msg_qi = NULL;
 
@@ -190,8 +193,7 @@ bool can_process_rx_message(can_message *buffer)
 
                 /* if the packet should be processed as a caniot packet */
 #if defined(CONFIG_CANIOT_LIB)
-                ret = process_caniot_frame(p_msg);
-                if (ret != 0) {
+                if (process_caniot_frame(p_msg) != 0) {
                         printf_P(PSTR("CANIOT frame processing failed : -%lx\n"), -ret);
                 }
 #endif
@@ -217,14 +219,18 @@ bool can_process_rx_message(can_message *buffer)
 
 void can_tx_entry(void *context)
 {
+	uint8_t ret;
         can_message_qi *mem;
 
         for (;;) {
                 mem = (can_message_qi *)k_fifo_get(&can_tx_q, K_FOREVER);
                 can_message *const p_msg = &mem->msg;
 
-                if (can_send(p_msg) == 0)
+		ret = can_send(p_msg);
+                if (ret == 0)
                         can_show_message(p_msg, CAN_DIR_TX);
+		else 
+			printf_P(PSTR("Err sending CAN message : %d\n"), ret);
 
                 can_msg_free(mem);
 
@@ -255,7 +261,7 @@ void can_msg_free(can_message_qi *msg)
 
 void can_show_message(can_message *msg, uint8_t dir)
 {
-        usart_print_p((dir == CAN_DIR_RX) ? PSTR("TX ") : PSTR("RX "));
+        usart_print_p((dir == CAN_DIR_RX) ? PSTR("RX ") : PSTR("TX "));
 
         if (msg->isext || msg->rtr) {
                 usart_transmit('-');

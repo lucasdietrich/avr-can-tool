@@ -29,6 +29,7 @@
         "errno.h": "c",
         "utils.h": "c",
         "time.h": "c",
-        "pendingq.h": "c"
+        "pendingq.h": "c",
+        "shell_modules.h": "c"
     }
 }
