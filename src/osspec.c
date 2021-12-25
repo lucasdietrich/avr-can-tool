@@ -1,7 +1,7 @@
 #include <avrtos/kernel.h>
 
-K_PRNG_DEFINE_DEFAULT(prng);
-K_MUTEX_DEFINE(prng_mutex);
+static K_PRNG_DEFINE_DEFAULT(prng);
+static K_MUTEX_DEFINE(prng_mutex);
 
 void entropy(uint8_t *buf, size_t len)
 {
