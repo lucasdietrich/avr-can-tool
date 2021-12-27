@@ -4,9 +4,12 @@
 #include <stdint.h>
 #include <stdio.h>
 
-
 #include <avrtos/kernel.h>
+
 #include <caniot.h>
+#include <controller.h>
+
+#include "caniot_controller.h"
 
 // discover
 
@@ -28,7 +31,7 @@
 #define SUBCMD_UNSET "unset"
 #define SUBCMD_UNSET_LEN (sizeof(SUBCMD_UNSET) - 1)
 
-static union deviceid cur_device = CANIOT_DEVICE_BROADCAST;
+static union deviceid cur_device = CANIOT_DEVICE(0x0, 0x1); /* CANIOT_DEVICE_BROADCAST */
 
 static bool is_device_api(char *cmd)
 {
@@ -38,11 +41,7 @@ static bool is_device_api(char *cmd)
 static int device_api_handler(char *cmd, uint8_t len)
 {
         if (len == 0) {
-                if (caniot_is_broadcast(cur_device)) {
-                        printf_P(PSTR(" : BROADCAST"));
-                } else {
-                        printf_P(PSTR(" : %d"), cur_device);
-                }
+                caniot_show_deviceid(cur_device);
         } else if (strncmp_P(cmd, PSTR(SUBCMD_UNSET), SUBCMD_UNSET_LEN) == 0) {
                 cur_device = CANIOT_DEVICE_BROADCAST;
         } else if (strncmp_P(cmd, PSTR(SUBCMD_SET), SUBCMD_SET_LEN) == 0) {
@@ -69,12 +68,7 @@ static int device_api_handler(char *cmd, uint8_t len)
         return 0;
 }
 
-static int caniot_discover(void)
-{
-        return -CANIOT_ENIMPL;
-}
-
-static int caniot_telemetry(void)
+static int query_discovery(void)
 {
         return -CANIOT_ENIMPL;
 }
@@ -88,9 +82,9 @@ int shell_caniot_handler(char *cmd, uint8_t len)
                                          len <= sizeof(SUBCMD_DEVICE) ?
                                          0 : len - sizeof(SUBCMD_DEVICE));
         } else if (strncmp_P(cmd, PSTR("discover"), sizeof("discover") - 1) == 0) {
-                ret = caniot_discover();
+                ret = query_discovery();
         } else if (strncmp_P(cmd, PSTR("telemetry"), sizeof("telemetry") - 1) == 0) {
-                ret = caniot_telemetry();
+                ret = request_telemetry(cur_device, endpoint_default, K_SECONDS(5));
         } else if (strncmp_P(cmd, PSTR("command"), sizeof("command") - 1) == 0) {
                 // ret = caniot_command(cur_device, cmd + sizeof("command"), len - sizeof("command"));
         } else {

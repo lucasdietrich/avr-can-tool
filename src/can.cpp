@@ -189,13 +189,13 @@ bool can_process_rx_message(can_message *buffer)
                 if (config.rx) {
                         printf_P(PSTR("%u : "), received++);
                         can_show_message(p_msg, CAN_DIR_RX);
+			printf_P(PSTR("\n"));
                 }
 
                 /* if the packet should be processed as a caniot packet */
 #if defined(CONFIG_CANIOT_LIB)
-                if (process_caniot_frame(p_msg) != 0) {
-                        printf_P(PSTR("CANIOT frame processing failed : -%lx\n"), -ret);
-                }
+		// if caniot paquet, queue it
+		queue_caniot_frame(p_msg);
 #endif
 
                 /* if loopback and allocation succeeded */
@@ -227,10 +227,11 @@ void can_tx_entry(void *context)
                 can_message *const p_msg = &mem->msg;
 
 		ret = can_send(p_msg);
-                if (ret == 0)
-                        can_show_message(p_msg, CAN_DIR_TX);
-		else 
+                if (ret == 0) {
+			can_show_message(p_msg, CAN_DIR_TX);
+		} else {
 			printf_P(PSTR("Err sending CAN message : %d\n"), ret);
+		}
 
                 can_msg_free(mem);
 
@@ -259,38 +260,28 @@ void can_msg_free(can_message_qi *msg)
         k_mem_slab_free(&can_msg_pool, (void *)msg);
 }
 
+// show can_message structure 
 void can_show_message(can_message *msg, uint8_t dir)
 {
-        usart_print_p((dir == CAN_DIR_RX) ? PSTR("RX ") : PSTR("TX "));
+	__ASSERT_NOTNULL(msg);
 
-        if (msg->isext || msg->rtr) {
-                usart_transmit('-');
-                if (msg->isext) {
-                        usart_transmit('X');
-                }
-                if (msg->rtr) {
-                        usart_transmit('R');
-                }
-                usart_transmit(' ');
-        }
+	printf_P(PSTR("%s : "), dir == CAN_DIR_RX ? "RX" : "TX");
 
-        /* if extended can message */
-        if (msg->isext == CAN_EXTID) {
-                usart_hex16((uint16_t)(msg->id >> 16));
-        }
-        usart_hex16((uint16_t)msg->id); /* STD part */
-        usart_transmit(':');
+	if (msg->isext) {
+		printf_P(PSTR("%08lx : "), msg->id);
+	} else {
+		printf_P(PSTR("%03lx : "), msg->id);
+	}
 
-        if (!msg->rtr) {
-                for (uint_fast8_t i = 0; i < MIN(msg->len, 8u); i++) {
-                        usart_transmit(' ');
-                        usart_hex(msg->buf[i]);
-                }
-        } else {
-                printf_P(PSTR("requested len = %02hhx"), msg->len);
-        }
-        
-        usart_transmit('\n');
+	// show the data and length if not rtr
+	if (!msg->rtr) {
+		for (uint8_t i = 0; i < msg->len; i++) {
+			printf_P(PSTR("%02x "), msg->buf[i]);
+		}
+	} else {
+		// show len if rtr
+		printf_P(PSTR("RTR %02x"), msg->len);
+	}
 }
 
 /*___________________________________________________________________________*/

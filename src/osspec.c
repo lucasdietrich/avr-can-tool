@@ -10,12 +10,15 @@ void entropy(uint8_t *buf, size_t len)
         k_mutex_unlock(&prng_mutex);
 }
 
-void get_time(uint32_t *sec, uint32_t *usec)
+void get_time(uint32_t *sec, uint16_t *msec)
 {
         struct timespec ts;
 
         k_timespec_get(&ts);
 
         *sec = ts.tv_sec;
-        *usec = ts.tv_msec * 1000;
+
+	if (msec != NULL) {
+        	*msec = ts.tv_msec;
+	}
 }

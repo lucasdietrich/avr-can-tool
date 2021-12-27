@@ -10,7 +10,16 @@
 
 #if defined(CONFIG_CANIOT_LIB)
 
-static int frame_caniot2can(struct caniot_frame *frame, can_message *msg)
+void controller_thread(void *ctx);
+
+#define CANIOT_CONTROLLER_QUEUE_SIZE 2
+char caniot_frame_q_buf[CANIOT_CONTROLLER_QUEUE_SIZE * sizeof(struct caniot_frame)];
+K_MSGQ_DEFINE(caniot_frame_q, caniot_frame_q_buf,
+	      sizeof(struct caniot_frame), CANIOT_CONTROLLER_QUEUE_SIZE);
+
+K_THREAD_DEFINE(caniot_controller, controller_thread, 0x100, K_COOPERATIVE, NULL, 'C');
+
+static int caniot2msg(can_message *msg, const struct caniot_frame *frame)
 {
         if (!frame || !msg) {
                 return -EINVAL;
@@ -20,18 +29,18 @@ static int frame_caniot2can(struct caniot_frame *frame, can_message *msg)
         msg->len = frame->len;
         msg->std = frame->id.raw;
         msg->rtr = 0;
-        msg->ext = 0;
+        msg->isext = 0;
 
         return 0;
 }
 
-static int frame_can2caniot(can_message *msg, struct caniot_frame *frame)
+static int msg2caniot(struct caniot_frame *frame, const can_message *msg)
 {
         if (!frame || !msg) {
                 return -EINVAL;
         }
 
-        if (msg->ext || msg->rtr) {
+        if (msg->isext || msg->rtr) {
                 return -EINVAL;
         }
 
@@ -42,15 +51,38 @@ static int frame_can2caniot(can_message *msg, struct caniot_frame *frame)
         return 0;
 }
 
-static int send(struct caniot_frame *frame, uint32_t delay)
+int queue_caniot_frame(const can_message *p_msg)
+{
+	struct caniot_frame frame;
+	int ret;
+
+	if (!p_msg) {
+		return -EINVAL;
+	}
+
+	ret = msg2caniot(&frame, p_msg);
+	if (ret) {
+		return ret;
+	}
+
+	if(caniot_controller_is_target(&frame) == false) {
+		return -EINVAL;
+	}
+
+	return k_msgq_put(&caniot_frame_q, &frame, K_NO_WAIT);
+}
+
+static int send(const struct caniot_frame *frame, uint32_t delay)
 {
         ARG_UNUSED(delay);
+
+	caniot_show_frame(frame);
 
         can_message_qi *msg;
 
         int8_t ret = can_msg_alloc(&msg, K_FOREVER);
         if (ret == 0) {
-                ret = frame_caniot2can(frame, &msg->msg);
+                ret = caniot2msg(&msg->msg, frame);
                 if (ret != 0) {
                         return ret;
                 }
@@ -59,20 +91,17 @@ static int send(struct caniot_frame *frame, uint32_t delay)
         return ret;
 }
 
+static int recv(struct caniot_frame *frame)
+{
+	return k_msgq_get(&caniot_frame_q, frame, K_NO_WAIT);
+}
+
 static const struct caniot_drivers_api drv = {
         .entropy = entropy,
         .get_time = get_time,
 
-        .persistent_read = NULL,
-        .persistent_write = NULL,
-        .rom_read = NULL,
-
         .send = send,
-        .recv = NULL,
-        .set_filter = NULL,
-        .set_mask = NULL,
-
-        .pending_telemetry = NULL,
+        .recv = recv,
 };
 
 static struct caniot_controller controller = {
@@ -81,43 +110,50 @@ static struct caniot_controller controller = {
         .driv = &drv
 };
 
-int process_caniot_frame(can_message *msg)
+void controller_thread(void *ctx)
 {
-        struct caniot_frame frame;
-        int ret;
+	int ret;
 
-        ret = frame_can2caniot(msg, &frame);
-        if (ret != 0) {
-                return ret;
-        }
+	ret = caniot_controller_init(&controller);
+	if (ret != 0) {
+		printf_P(PSTR("Failed to initialize CANIOT controller: -%04x\n"), -ret);
+		__fault(K_FAULT);
+	}
 
-        return caniot_controller_handle_rx_frame(&controller, &frame);
+	for(;;) {
+		caniot_controller_process(&controller);
+
+		k_sleep(K_MSEC(100));
+	}
 }
 
-struct k_signal query_sig;
-
-static int query_callback(union deviceid did,
-                          struct caniot_frame *resp)
+static int32_t timeout2signed(k_timeout_t timeout)
 {
-        k_signal_raise(&query_sig, resp == NULL);
+	if (K_TIMEOUT_EQ(timeout, K_FOREVER)) {
+		return -1;
+	} else {
+		return (int32_t) timeout.value;
+	}
+}
 
-        return 0;
+static int cb(union deviceid did, struct caniot_frame *resp)
+{
+	if (resp == NULL) {
+		printf_P(PSTR("Timeout\n"));
+	} else {
+		caniot_explain_frame(resp);
+	}
+
+	return 0;
 }
 
 int request_telemetry(union deviceid did, uint8_t ep, k_timeout_t timeout)
 {
-        int ret;
+	K_SCHED_LOCK_CONTEXT{
+		return caniot_request_telemetry(&controller, did, ep, cb, timeout2signed(timeout));
+	}
 
-        int32_t tm = K_TIMEOUT_EQ(timeout, K_FOREVER) ?
-                ((int32_t)-1) : (int32_t)timeout.value;
-
-        ret = caniot_request_telemetry(&controller, did, ep, query_callback, tm);
-        if (ret != 0 && k_poll_signal(&query_sig, K_FOREVER) == 0) {
-                K_SIGNAL_SET_UNREADY(&query_sig);
-                printf("%hhx", query_sig.signal);
-        }
-
-        return ret;
+	__builtin_unreachable();
 }
 
 #endif /* defined(CONFIG_CANIOT_LIB) */
