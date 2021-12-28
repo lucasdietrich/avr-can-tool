@@ -11,30 +11,30 @@
 
 /*___________________________________________________________________________*/
 
-static const char can_help[] PROGMEM =
-        "- can tx {id} {b1} {b2} {b3} {b4} {b5} {b6} {b7}\n"
-        "\t> can tx 20F AA BB CC DD\n";
+// static const char can_help[] PROGMEM =
+//         "- can tx {id} {b1} {b2} {b3} {b4} {b5} {b6} {b7}\n"
+//         "\t> can tx 20F AA BB CC DD\n";
 
-static const char kernel_help[] PROGMEM = "- wait {delay_ms}\n"
-        "\t> kernel wait 1000\n"
-        "- prng\n"
-        "\t> kernel prng\n"
-        "- uptime\n"
-        "\t> kernel uptime\n"
-        "- canaries\n"
-        "\t> kernel canaries\n"
-        "- threads\n"
-        "\t> kernel threads\n";
+// static const char kernel_help[] PROGMEM = "- wait {delay_ms}\n"
+//         "\t> kernel wait 1000\n"
+//         "- prng\n"
+//         "\t> kernel prng\n"
+//         "- uptime\n"
+//         "\t> kernel uptime\n"
+//         "- canaries\n"
+//         "\t> kernel canaries\n"
+//         "- threads\n"
+//         "\t> kernel threads\n";
 
 #define SHELL_SHORTCUT 1
 
 static const struct shell_module modules[] PROGMEM = {
-        SHELL_MODULE("can", can_shell_handler, can_help),
-        SHELL_MODULE("kernel", kernel_shell_handler, kernel_help),
+        SHELL_MODULE("can", can_shell_handler, NULL),
+        SHELL_MODULE("kernel", kernel_shell_handler, NULL),
         SHELL_MODULE("caniot", shell_caniot_handler, NULL),
         SHELL_MODULE("help", shell_help_handler, NULL),
 #if SHELL_SHORTCUT
-        SHELL_MODULE("k", kernel_shell_handler, kernel_help), /* k is a shortcut for kernel */
+        SHELL_MODULE("k", kernel_shell_handler, NULL), /* k is a shortcut for kernel */
         SHELL_MODULE("ct", shell_caniot_handler, NULL), /* "ct" is a shortcut for caniot */
 #endif /* SHELL_SHORTCUT */
 };

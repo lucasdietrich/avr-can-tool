@@ -13,8 +13,8 @@
 void controller_thread(void *ctx);
 
 #define CANIOT_CONTROLLER_QUEUE_SIZE 2
-char caniot_frame_q_buf[CANIOT_CONTROLLER_QUEUE_SIZE * sizeof(struct caniot_frame)];
-K_MSGQ_DEFINE(caniot_frame_q, caniot_frame_q_buf,
+char caniot_rxframe_q_buf[CANIOT_CONTROLLER_QUEUE_SIZE * sizeof(struct caniot_frame)];
+K_MSGQ_DEFINE(caniot_rxframe_q, caniot_rxframe_q_buf,
 	      sizeof(struct caniot_frame), CANIOT_CONTROLLER_QUEUE_SIZE);
 
 K_THREAD_DEFINE(caniot_controller, controller_thread, 0xA0, K_COOPERATIVE, NULL, 'C');
@@ -51,7 +51,7 @@ static int msg2caniot(struct caniot_frame *frame, const can_message *msg)
         return 0;
 }
 
-int queue_caniot_frame(const can_message *p_msg)
+int queue_caniot_rxframe(const can_message *p_msg)
 {
 	struct caniot_frame frame;
 	int ret;
@@ -69,7 +69,7 @@ int queue_caniot_frame(const can_message *p_msg)
 		return -EINVAL;
 	}
 
-	return k_msgq_put(&caniot_frame_q, &frame, K_NO_WAIT);
+	return k_msgq_put(&caniot_rxframe_q, &frame, K_NO_WAIT);
 }
 
 static int send(const struct caniot_frame *frame, uint32_t delay)
@@ -93,9 +93,9 @@ static int send(const struct caniot_frame *frame, uint32_t delay)
 
 static int recv(struct caniot_frame *frame)
 {
-	int ret = k_msgq_get(&caniot_frame_q, frame, K_NO_WAIT);
+	int ret = k_msgq_get(&caniot_rxframe_q, frame, K_NO_WAIT);
 	
-	if (ret == -ENOMSG || ret == -ENOMEM) {
+	if (ret == -ENOMSG) {
 		/* No message available */
 		return -CANIOT_EAGAIN;
 	}

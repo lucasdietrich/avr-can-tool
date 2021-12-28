@@ -192,7 +192,7 @@ bool can_process_rx_message(can_message *buffer)
                 /* if the packet should be processed as a caniot packet */
 #if defined(CONFIG_CANIOT_LIB)
 		// if caniot paquet, queue it
-		int ret = queue_caniot_frame(p_msg);
+		int ret = queue_caniot_rxframe(p_msg);
 		if (ret != 0) {
 			printf_P(PSTR("caniot queue failed : -%d\n"), -ret);
 		}
