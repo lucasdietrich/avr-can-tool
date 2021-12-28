@@ -17,7 +17,7 @@ char caniot_frame_q_buf[CANIOT_CONTROLLER_QUEUE_SIZE * sizeof(struct caniot_fram
 K_MSGQ_DEFINE(caniot_frame_q, caniot_frame_q_buf,
 	      sizeof(struct caniot_frame), CANIOT_CONTROLLER_QUEUE_SIZE);
 
-K_THREAD_DEFINE(caniot_controller, controller_thread, 0x100, K_COOPERATIVE, NULL, 'C');
+K_THREAD_DEFINE(caniot_controller, controller_thread, 0xA0, K_COOPERATIVE, NULL, 'C');
 
 static int caniot2msg(can_message *msg, const struct caniot_frame *frame)
 {
@@ -76,7 +76,7 @@ static int send(const struct caniot_frame *frame, uint32_t delay)
 {
         ARG_UNUSED(delay);
 
-	caniot_show_frame(frame);
+	caniot_explain_frame(frame);
 
         can_message_qi *msg;
 
@@ -93,7 +93,14 @@ static int send(const struct caniot_frame *frame, uint32_t delay)
 
 static int recv(struct caniot_frame *frame)
 {
-	return k_msgq_get(&caniot_frame_q, frame, K_NO_WAIT);
+	int ret = k_msgq_get(&caniot_frame_q, frame, K_NO_WAIT);
+	
+	if (ret == -ENOMSG || ret == -ENOMEM) {
+		/* No message available */
+		return -CANIOT_EAGAIN;
+	}
+
+	return ret;
 }
 
 static const struct caniot_drivers_api drv = {
@@ -121,23 +128,14 @@ void controller_thread(void *ctx)
 	}
 
 	for(;;) {
-		caniot_controller_process(&controller);
+		caniot_show_error(caniot_controller_process(&controller));
 
-		k_sleep(K_MSEC(100));
-	}
-}
-
-static int32_t timeout2signed(k_timeout_t timeout)
-{
-	if (K_TIMEOUT_EQ(timeout, K_FOREVER)) {
-		return -1;
-	} else {
-		return (int32_t) timeout.value;
+		k_sleep(K_MSEC(500));
 	}
 }
 
 static int cb(union deviceid did, struct caniot_frame *resp)
-{
+{	
 	if (resp == NULL) {
 		printf_P(PSTR("Timeout\n"));
 	} else {
@@ -150,7 +148,8 @@ static int cb(union deviceid did, struct caniot_frame *resp)
 int request_telemetry(union deviceid did, uint8_t ep, k_timeout_t timeout)
 {
 	K_SCHED_LOCK_CONTEXT{
-		return caniot_request_telemetry(&controller, did, ep, cb, timeout2signed(timeout));
+		return caniot_request_telemetry(&controller, did, ep,
+						cb, K_TIMEOUT_MS(timeout));
 	}
 
 	__builtin_unreachable();

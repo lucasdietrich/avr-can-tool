@@ -171,8 +171,6 @@ bool can_process_rx_message(can_message *buffer)
         can_message *p_msg = buffer;
         can_message_qi *p_msg_qi = NULL;
 
-        static uint16_t received = 0;
-
         if (config.loopback && (config.loopback_rule != NULL)) {
                 if (can_msg_alloc(&p_msg_qi, K_MSEC(100u)) == 0) {
                         p_msg = &p_msg_qi->msg;
@@ -187,7 +185,6 @@ bool can_process_rx_message(can_message *buffer)
 
                 /* show the received packet */
                 if (config.rx) {
-                        printf_P(PSTR("%u : "), received++);
                         can_show_message(p_msg, CAN_DIR_RX);
 			printf_P(PSTR("\n"));
                 }
@@ -195,7 +192,10 @@ bool can_process_rx_message(can_message *buffer)
                 /* if the packet should be processed as a caniot packet */
 #if defined(CONFIG_CANIOT_LIB)
 		// if caniot paquet, queue it
-		queue_caniot_frame(p_msg);
+		int ret = queue_caniot_frame(p_msg);
+		if (ret != 0) {
+			printf_P(PSTR("caniot queue failed : -%d\n"), -ret);
+		}
 #endif
 
                 /* if loopback and allocation succeeded */
@@ -265,23 +265,29 @@ void can_show_message(can_message *msg, uint8_t dir)
 {
 	__ASSERT_NOTNULL(msg);
 
-	printf_P(PSTR("%s : "), dir == CAN_DIR_RX ? "RX" : "TX");
+	printf_P(PSTR("[ %s "), dir == CAN_DIR_RX ? "RX" : "TX");
 
 	if (msg->isext) {
-		printf_P(PSTR("%08lx : "), msg->id);
+		printf_P(PSTR("%08lx"), msg->id);
 	} else {
-		printf_P(PSTR("%03lx : "), msg->id);
+		printf_P(PSTR("%03lx"), msg->id);
 	}
 
 	// show the data and length if not rtr
 	if (!msg->rtr) {
-		for (uint8_t i = 0; i < msg->len; i++) {
-			printf_P(PSTR("%02x "), msg->buf[i]);
+		if (msg->len > 0) {
+			printf_P(PSTR(" / "), msg->len);
+
+			for (uint8_t i = 0; i < msg->len; i++) {
+				printf_P(PSTR("%02hhx "), msg->buf[i]);
+			}
 		}
 	} else {
 		// show len if rtr
-		printf_P(PSTR("RTR %02x"), msg->len);
+		printf_P(PSTR(" RTR %02x"), msg->len);
 	}
+
+	printf_P(PSTR("] "));
 }
 
 /*___________________________________________________________________________*/

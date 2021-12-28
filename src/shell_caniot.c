@@ -31,11 +31,19 @@
 #define SUBCMD_UNSET "unset"
 #define SUBCMD_UNSET_LEN (sizeof(SUBCMD_UNSET) - 1)
 
+#define SUBCMD_TELEMETRY "telemetry"
+#define SUBCMD_TELEMETRY_LEN (sizeof(SUBCMD_TELEMETRY) - 1)
+
 static union deviceid cur_device = CANIOT_DEVICE(0x0, 0x1); /* CANIOT_DEVICE_BROADCAST */
 
-static bool is_device_api(char *cmd)
+static inline bool is_device_api(char *cmd)
 {
         return strncmp_P(cmd, PSTR(SUBCMD_DEVICE), SUBCMD_DEVICE_LEN) == 0;
+}
+
+static inline bool is_telemetry_api(char *cmd)
+{
+	return strncmp_P(cmd, PSTR(SUBCMD_TELEMETRY), SUBCMD_TELEMETRY_LEN) == 0;
 }
 
 static int device_api_handler(char *cmd, uint8_t len)
@@ -68,6 +76,18 @@ static int device_api_handler(char *cmd, uint8_t len)
         return 0;
 }
 
+static int telemetry_api_handler(char *cmd, uint8_t len)
+{
+	uint8_t ep = endpoint_default;
+	uint16_t timeout = 10000u;
+
+	if (len > 0) {
+		sscanf_P(cmd, PSTR("%hhu %u"), &ep, &timeout);
+	}
+
+	return request_telemetry(cur_device, ep, K_MSEC(timeout));
+}
+
 static int query_discovery(void)
 {
         return -CANIOT_ENIMPL;
@@ -77,16 +97,24 @@ int shell_caniot_handler(char *cmd, uint8_t len)
 {
         int ret = -EINVAL;
 
+	printf_P(PSTR("\n"));
+
         if (is_device_api(cmd)) {
                 ret = device_api_handler(cmd + sizeof(SUBCMD_DEVICE),
                                          len <= sizeof(SUBCMD_DEVICE) ?
                                          0 : len - sizeof(SUBCMD_DEVICE));
         } else if (strncmp_P(cmd, PSTR("discover"), sizeof("discover") - 1) == 0) {
                 ret = query_discovery();
-        } else if (strncmp_P(cmd, PSTR("telemetry"), sizeof("telemetry") - 1) == 0) {
-                ret = request_telemetry(cur_device, endpoint_default, K_SECONDS(5));
+        } else if (is_telemetry_api(cmd)) {
+		ret = telemetry_api_handler(cmd + sizeof(SUBCMD_TELEMETRY),
+					    len <= sizeof(SUBCMD_TELEMETRY) ?
+					    0 : len - sizeof(SUBCMD_TELEMETRY));
         } else if (strncmp_P(cmd, PSTR("command"), sizeof("command") - 1) == 0) {
                 // ret = caniot_command(cur_device, cmd + sizeof("command"), len - sizeof("command"));
+	} else if (strncmp_P(cmd, PSTR("readattr"), sizeof("readattr") - 1) == 0) {
+
+	} else if (strncmp_P(cmd, PSTR("writeattr"), sizeof("writeattr") - 1) == 0) {
+
         } else {
                 printf_P(PSTR(" : invalid command\n"));
                 ret = -EINVAL;

@@ -123,11 +123,10 @@ void shell_dispatch_command(struct command *cmd)
                 const uint8_t len = skip >= cmd->len ? 0u : cmd->len - skip;
                 ret = handler(cmd->buffer + skip, len);
                 if (ret) {
-                        printf_P(PSTR("\nFailed to execute module "
-                                      "handler err = %02hhx\n"), ret);
+                        printf_P(PSTR("\nMODULE ERROR: -%x"), -ret);
                 }
         } else {
-                printf_P(PSTR("\nModule not found !\n"));
+                printf_P(PSTR("\nNo such module!\n"));
         }
 }
 
