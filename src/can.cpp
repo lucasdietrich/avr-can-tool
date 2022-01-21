@@ -276,10 +276,10 @@ void can_show_message(can_message *msg, uint8_t dir)
 	// show the data and length if not rtr
 	if (!msg->rtr) {
 		if (msg->len > 0) {
-			printf_P(PSTR(" / "), msg->len);
+			printf_P(PSTR(" /"), msg->len);
 
 			for (uint8_t i = 0; i < msg->len; i++) {
-				printf_P(PSTR("%02hhx "), msg->buf[i]);
+				printf_P(PSTR(" %02hhx"), msg->buf[i]);
 			}
 		}
 	} else {
@@ -287,7 +287,7 @@ void can_show_message(can_message *msg, uint8_t dir)
 		printf_P(PSTR(" RTR %02x"), msg->len);
 	}
 
-	printf_P(PSTR("] "));
+	printf_P(PSTR(" ] "));
 }
 
 /*___________________________________________________________________________*/

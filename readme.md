@@ -30,7 +30,6 @@ I 045C [PREE 2] READY   : SP 35/62 -| END @0305
 [>] CANARIES until @0257 [found 143], MAX usage = 113 / 256
 [M] CANARIES until @056A [found 64], MAX usage = 36 / 100
 [I] CANARIES until @02D6 [found 14], MAX usage = 48 / 62
-
 >
 ```
 
@@ -105,3 +104,27 @@ kernel wait 5000
 
 - avr-can tool cannot receive EXTENDED ID can message. Maybe filters mask ? ...
         - maybe an explanation for the bug where not being able to receive a can message but able to send
+
+# Updating from AVRTOS1 to AVRTOS2
+
+## AVRTOS2
+
+RX
+```
+[R] CANARIES until @0107 [found 6], MAX usage = 93 / 99 + 1 (sentinel)
+[T] CANARIES until @018A [found 37], MAX usage = 62 / 99 + 1 (sentinel)
+[C] CANARIES until @0243 [found 122], MAX usage = 37 / 159 + 1 (sentinel)
+[>] CANARIES until @02F8 [found 143], MAX usage = 112 / 255 + 1 (sentinel)
+[M] CANARIES until @06C8 [found 39], MAX usage = 40 / 79 + 1 (sentinel)
+```
+
+TX
+```
+[R] CANARIES until @0116 [found 21], MAX usage = 78 / 99 + 1 (sentinel)
+[T] CANARIES until @0185 [found 32], MAX usage = 67 / 99 + 1 (sentinel)
+[C] CANARIES until @0243 [found 122], MAX usage = 37 / 159 + 1 (sentinel)
+[>] CANARIES until @02F8 [found 143], MAX usage = 112 / 255 + 1 (sentinel)
+[M] CANARIES until @06C8 [found 39], MAX usage = 40 / 79 + 1 (sentinel)
+```
+
+## AVRTOS1

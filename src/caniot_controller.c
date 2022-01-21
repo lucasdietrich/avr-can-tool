@@ -12,7 +12,7 @@
 
 void controller_thread(void *ctx);
 
-#define CANIOT_CONTROLLER_QUEUE_SIZE 2
+#define CANIOT_CONTROLLER_QUEUE_SIZE 5
 char caniot_rxframe_q_buf[CANIOT_CONTROLLER_QUEUE_SIZE * sizeof(struct caniot_frame)];
 K_MSGQ_DEFINE(caniot_rxframe_q, caniot_rxframe_q_buf,
 	      sizeof(struct caniot_frame), CANIOT_CONTROLLER_QUEUE_SIZE);
@@ -66,7 +66,7 @@ int queue_caniot_rxframe(const can_message *p_msg)
 	}
 
 	if(caniot_controller_is_target(&frame) == false) {
-		return -EINVAL;
+		return 0; /* not for us */
 	}
 
 	return k_msgq_put(&caniot_rxframe_q, &frame, K_NO_WAIT);

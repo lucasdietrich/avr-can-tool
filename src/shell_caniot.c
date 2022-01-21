@@ -34,7 +34,7 @@
 #define SUBCMD_TELEMETRY "telemetry"
 #define SUBCMD_TELEMETRY_LEN (sizeof(SUBCMD_TELEMETRY) - 1)
 
-static union deviceid cur_device = CANIOT_DEVICE(0x0, 0x1); /* CANIOT_DEVICE_BROADCAST */
+static union deviceid cur_device = CANIOT_DEVICE(0x0, 0x3); /* CANIOT_DEVICE_BROADCAST */
 
 static inline bool is_device_api(char *cmd)
 {
