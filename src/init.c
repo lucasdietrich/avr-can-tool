@@ -5,11 +5,6 @@
 
 #include <stdio.h>
 
-void os_init()
-{        
-        k_avrtos_init();
-}
-
 // @see "init" function from arduino in "wiring.c"
 void hw_ll_init(void)
 {

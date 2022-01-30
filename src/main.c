@@ -4,6 +4,8 @@
 
 #include <stdio.h>
 
+K_KERNEL_INIT();
+
 int main()
 {
         app_init();
